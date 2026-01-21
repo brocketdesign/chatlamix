@@ -181,9 +181,34 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-lg mb-1">Réseaux Sociaux</h3>
+            <h3 className="font-semibold text-lg mb-1">Social Media</h3>
             <p className="text-gray-400 text-sm">
-              Configurez vos comptes et calendriers de publication
+              Configure your accounts and posting schedules
+            </p>
+          </Link>
+
+          <Link
+            href="/dashboard/content-automation"
+            className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
+          >
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">🤖 Content Automation</h3>
+            <p className="text-gray-400 text-sm">
+              Generate recurring content with AI
             </p>
           </Link>
         </div>

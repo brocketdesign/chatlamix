@@ -12,13 +12,13 @@ import {
 } from "@/lib/types";
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Dimanche" },
-  { value: 1, label: "Lundi" },
-  { value: 2, label: "Mardi" },
-  { value: 3, label: "Mercredi" },
-  { value: 4, label: "Jeudi" },
-  { value: 5, label: "Vendredi" },
-  { value: 6, label: "Samedi" },
+  { value: 0, label: "Sunday" },
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
 ];
 
 const PLATFORM_ICONS: Record<SocialPlatform, string> = {
@@ -117,7 +117,7 @@ export default function SocialMediaSettingsPage() {
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) {
-      setError("Veuillez entrer une clé API");
+      setError("Please enter an API key");
       return;
     }
 
@@ -137,10 +137,10 @@ export default function SocialMediaSettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors de la sauvegarde");
+        throw new Error(data.error || "Error saving");
       }
 
-      setSuccess("Clé API sauvegardée avec succès !");
+      setSuccess("API key saved successfully!");
       setApiKey("");
       loadData();
     } catch (err: any) {
@@ -152,12 +152,12 @@ export default function SocialMediaSettingsPage() {
 
   async function handleCreateTemplate() {
     if (!newTemplate.name.trim()) {
-      setError("Le nom du modèle est requis");
+      setError("Template name is required");
       return;
     }
 
     if (newTemplate.slots.length === 0) {
-      setError("Ajoutez au moins un créneau de publication");
+      setError("Add at least one posting slot");
       return;
     }
 
@@ -176,7 +176,7 @@ export default function SocialMediaSettingsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors de la création");
+        throw new Error(data.error || "Error creating template");
       }
 
       const { template } = await res.json();
@@ -189,7 +189,7 @@ export default function SocialMediaSettingsPage() {
         isDefault: false,
       });
       setShowNewTemplate(false);
-      setSuccess("Modèle créé avec succès !");
+      setSuccess("Template created successfully!");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -198,7 +198,7 @@ export default function SocialMediaSettingsPage() {
   }
 
   async function handleDeleteTemplate(templateId: string) {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce modèle ?")) return;
+    if (!confirm("Are you sure you want to delete this template?")) return;
 
     try {
       const res = await fetch(`/api/social-media/schedule-template?id=${templateId}`, {
@@ -207,10 +207,10 @@ export default function SocialMediaSettingsPage() {
 
       if (res.ok) {
         setTemplates(templates.filter((t) => t.id !== templateId));
-        setSuccess("Modèle supprimé");
+        setSuccess("Template deleted");
       }
     } catch (err) {
-      setError("Erreur lors de la suppression");
+      setError("Error deleting template");
     }
   }
 
@@ -231,7 +231,7 @@ export default function SocialMediaSettingsPage() {
         );
       }
     } catch (err) {
-      setError("Erreur lors de la mise à jour");
+      setError("Error updating template");
     }
   }
 
@@ -278,7 +278,7 @@ export default function SocialMediaSettingsPage() {
             >
               ←
             </Link>
-            <h1 className="text-xl font-bold">Paramètres Réseaux Sociaux</h1>
+            <h1 className="text-xl font-bold">Social Media Settings</h1>
           </div>
         </div>
       </header>
@@ -308,7 +308,7 @@ export default function SocialMediaSettingsPage() {
                 : "bg-surface-light border border-border hover:border-primary/50"
             }`}
           >
-            Connexion
+            Connection
           </button>
           <button
             onClick={() => setActiveTab("templates")}
@@ -318,7 +318,7 @@ export default function SocialMediaSettingsPage() {
                 : "bg-surface-light border border-border hover:border-primary/50"
             }`}
           >
-            Calendriers
+            Schedules
           </button>
         </div>
 
@@ -326,9 +326,9 @@ export default function SocialMediaSettingsPage() {
           <div className="space-y-6">
             {/* API Key Section */}
             <div className="glass border border-border rounded-2xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Clé API Late</h2>
+              <h2 className="text-lg font-semibold mb-4">Late API Key</h2>
               <p className="text-gray-400 text-sm mb-4">
-                Connectez votre compte{" "}
+                Connect your{" "}
                 <a
                   href="https://getlate.dev"
                   target="_blank"
@@ -337,14 +337,14 @@ export default function SocialMediaSettingsPage() {
                 >
                   Late.dev
                 </a>{" "}
-                pour publier sur les réseaux sociaux.
+                account to post on social media.
               </p>
 
               {hasApiKey ? (
                 <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                   <p className="text-green-400 flex items-center gap-2">
                     <span className="text-lg">✓</span>
-                    Clé API configurée
+                    API key configured
                   </p>
                 </div>
               ) : (
@@ -361,7 +361,7 @@ export default function SocialMediaSettingsPage() {
                     disabled={saving}
                     className="gradient-primary text-white py-3 px-6 rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50"
                   >
-                    {saving ? "Sauvegarde..." : "Sauvegarder"}
+                    {saving ? "Saving..." : "Save"}
                   </button>
                 </div>
               )}
@@ -370,11 +370,11 @@ export default function SocialMediaSettingsPage() {
             {/* Connected Accounts */}
             {hasApiKey && (
               <div className="glass border border-border rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-4">Comptes Connectés</h2>
+                <h2 className="text-lg font-semibold mb-4">Connected Accounts</h2>
 
                 {profiles.length > 1 && (
                   <div className="mb-4">
-                    <label className="block text-sm text-gray-400 mb-2">Profil</label>
+                    <label className="block text-sm text-gray-400 mb-2">Profile</label>
                     <select
                       value={selectedProfile}
                       onChange={(e) => setSelectedProfile(e.target.value)}
@@ -411,14 +411,14 @@ export default function SocialMediaSettingsPage() {
 
                 {accounts.length === 0 && (
                   <p className="text-center text-gray-500 py-8">
-                    Aucun compte connecté.{" "}
+                    No accounts connected.{" "}
                     <a
                       href="https://getlate.dev/dashboard"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline"
                     >
-                      Connecter des comptes sur Late.dev
+                      Connect accounts on Late.dev
                     </a>
                   </p>
                 )}
@@ -432,46 +432,46 @@ export default function SocialMediaSettingsPage() {
             {/* Create Template */}
             <div className="glass border border-border rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Modèles de Calendrier</h2>
+                <h2 className="text-lg font-semibold">Schedule Templates</h2>
                 <button
                   onClick={() => setShowNewTemplate(!showNewTemplate)}
                   className="py-2 px-4 gradient-primary text-white rounded-lg font-semibold hover:opacity-90 transition-all"
                 >
-                  {showNewTemplate ? "Annuler" : "+ Nouveau"}
+                  {showNewTemplate ? "Cancel" : "+ New"}
                 </button>
               </div>
 
               <p className="text-gray-400 text-sm mb-4">
-                Créez des calendriers de publication avec des créneaux horaires prédéfinis.
-                Les posts seront automatiquement programmés au prochain créneau disponible.
+                Create posting schedules with predefined time slots.
+                Posts will be automatically scheduled to the next available slot.
               </p>
 
               {showNewTemplate && (
                 <div className="border-t border-border pt-4 mt-4 space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Nom du modèle</label>
+                    <label className="block text-sm text-gray-400 mb-2">Template Name</label>
                     <input
                       type="text"
                       value={newTemplate.name}
                       onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                      placeholder="Ex: Publications quotidiennes"
+                      placeholder="E.g.: Daily Posts"
                       className="w-full px-4 py-3 bg-surface-light border border-border rounded-xl focus:border-primary focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Description (optionnel)</label>
+                    <label className="block text-sm text-gray-400 mb-2">Description (optional)</label>
                     <input
                       type="text"
                       value={newTemplate.description}
                       onChange={(e) => setNewTemplate({ ...newTemplate, description: e.target.value })}
-                      placeholder="Description du calendrier"
+                      placeholder="Schedule description"
                       className="w-full px-4 py-3 bg-surface-light border border-border rounded-xl focus:border-primary focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Fuseau horaire</label>
+                    <label className="block text-sm text-gray-400 mb-2">Timezone</label>
                     <select
                       value={newTemplate.timezone}
                       onChange={(e) => setNewTemplate({ ...newTemplate, timezone: e.target.value })}
@@ -485,7 +485,7 @@ export default function SocialMediaSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Créneaux de publication</label>
+                    <label className="block text-sm text-gray-400 mb-2">Posting Slots</label>
                     <div className="grid grid-cols-7 gap-2 mb-4">
                       {DAYS_OF_WEEK.map((day) => (
                         <div key={day.value} className="text-center">
@@ -518,7 +518,7 @@ export default function SocialMediaSettingsPage() {
                       ))}
                     </div>
                     <p className="text-xs text-gray-500">
-                      {newTemplate.slots.length} créneaux sélectionnés
+                      {newTemplate.slots.length} slots selected
                     </p>
                   </div>
 
@@ -529,7 +529,7 @@ export default function SocialMediaSettingsPage() {
                       onChange={(e) => setNewTemplate({ ...newTemplate, isDefault: e.target.checked })}
                       className="w-4 h-4 accent-primary"
                     />
-                    <span>Définir comme calendrier par défaut</span>
+                    <span>Set as default schedule</span>
                   </label>
 
                   <button
@@ -537,7 +537,7 @@ export default function SocialMediaSettingsPage() {
                     disabled={saving}
                     className="w-full gradient-primary text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50"
                   >
-                    {saving ? "Création..." : "Créer le modèle"}
+                    {saving ? "Creating..." : "Create Template"}
                   </button>
                 </div>
               )}
@@ -557,7 +557,7 @@ export default function SocialMediaSettingsPage() {
                           {template.name}
                           {template.isDefault && (
                             <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full">
-                              Par défaut
+                              Default
                             </span>
                           )}
                         </h3>
@@ -571,14 +571,14 @@ export default function SocialMediaSettingsPage() {
                             onClick={() => handleSetDefaultTemplate(template.id)}
                             className="text-sm text-primary hover:underline"
                           >
-                            Définir par défaut
+                            Set as default
                           </button>
                         )}
                         <button
                           onClick={() => handleDeleteTemplate(template.id)}
                           className="text-sm text-red-400 hover:text-red-300"
                         >
-                          Supprimer
+                          Delete
                         </button>
                       </div>
                     </div>
@@ -595,7 +595,7 @@ export default function SocialMediaSettingsPage() {
                     </div>
 
                     <div className="mt-3 text-xs text-gray-500">
-                      Fuseau: {template.timezone} • {template.slots.length} créneaux/semaine
+                      Timezone: {template.timezone} • {template.slots.length} slots/week
                     </div>
                   </div>
                 ))}
@@ -605,9 +605,9 @@ export default function SocialMediaSettingsPage() {
             {templates.length === 0 && !showNewTemplate && (
               <div className="text-center py-12 glass border border-border rounded-2xl">
                 <div className="text-4xl mb-4">📅</div>
-                <h3 className="text-lg font-semibold mb-2">Aucun calendrier</h3>
+                <h3 className="text-lg font-semibold mb-2">No Schedules</h3>
                 <p className="text-gray-400 text-sm mb-4">
-                  Créez un calendrier pour programmer automatiquement vos publications.
+                  Create a schedule to automatically program your posts.
                 </p>
               </div>
             )}
