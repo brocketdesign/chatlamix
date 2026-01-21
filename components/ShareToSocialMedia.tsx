@@ -197,11 +197,11 @@ export default function ShareToSocialMedia({
         setContent(data.content || "");
       } else {
         const errData = await res.json();
-        setError(errData.error || "Erreur lors de la génération du texte");
+        setError(errData.error || "Error generating content");
       }
     } catch (err) {
       console.error("Error generating content:", err);
-      setError("Erreur lors de la génération du texte");
+      setError("Error generating content");
     } finally {
       setGeneratingContent(false);
     }
@@ -230,11 +230,11 @@ export default function ShareToSocialMedia({
         });
       } else {
         const errData = await res.json();
-        setError(errData.error || "Erreur lors de la génération des hashtags");
+        setError(errData.error || "Error generating hashtags");
       }
     } catch (err) {
       console.error("Error generating hashtags:", err);
-      setError("Erreur lors de la génération des hashtags");
+      setError("Error generating hashtags");
     } finally {
       setGeneratingHashtags(false);
     }
@@ -313,7 +313,7 @@ export default function ShareToSocialMedia({
 
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("fr-FR", {
+    return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -341,12 +341,12 @@ export default function ShareToSocialMedia({
         <div className="glass border border-border rounded-2xl p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <div className="text-4xl mb-4">🔑</div>
-            <h2 className="text-xl font-bold mb-2">Configuration requise</h2>
+            <h2 className="text-xl font-bold mb-2">Configuration Required</h2>
             <p className="text-gray-400 mb-6">
-              Pour publier sur les réseaux sociaux, vous devez configurer votre clé API Late.
+              To post on social media, you need to configure your Late API key.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Créez un compte sur{" "}
+              Create an account on{" "}
               <a
                 href="https://getlate.dev"
                 target="_blank"
@@ -355,13 +355,13 @@ export default function ShareToSocialMedia({
               >
                 getlate.dev
               </a>{" "}
-              et ajoutez votre clé API dans les paramètres.
+              and add your API key in settings.
             </p>
             <button
               onClick={onClose}
               className="py-2 px-6 bg-surface-light border border-border rounded-lg hover:border-primary/50 transition-all"
             >
-              Fermer
+              Close
             </button>
           </div>
         </div>
@@ -375,7 +375,7 @@ export default function ShareToSocialMedia({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">
-            {step === "success" ? "✅ Publié !" : "Partager sur les réseaux sociaux"}
+            {step === "success" ? "✅ Published!" : "Share on Social Media"}
           </h2>
           <button
             onClick={onClose}
@@ -394,15 +394,15 @@ export default function ShareToSocialMedia({
         {step === "success" ? (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">🎉</div>
-            <h3 className="text-lg font-semibold mb-2">Publication programmée !</h3>
+            <h3 className="text-lg font-semibold mb-2">Post Scheduled!</h3>
             <p className="text-gray-400 mb-6">
-              Votre image sera publiée automatiquement selon votre calendrier.
+              Your image will be published automatically according to your schedule.
             </p>
             <button
               onClick={onClose}
               className="gradient-primary text-white py-3 px-8 rounded-xl font-semibold hover:opacity-90 transition-all"
             >
-              Fermer
+              Close
             </button>
           </div>
         ) : (
@@ -423,7 +423,7 @@ export default function ShareToSocialMedia({
             {/* Profile Selection */}
             {profiles.length > 1 && (
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-2">Profil Late</label>
+                <label className="block text-sm text-gray-400 mb-2">Late Profile</label>
                 <select
                   value={selectedProfile}
                   onChange={(e) => setSelectedProfile(e.target.value)}
@@ -441,7 +441,7 @@ export default function ShareToSocialMedia({
             {/* Account Selection */}
             <div className="mb-4">
               <label className="block text-sm text-gray-400 mb-2">
-                Comptes ({selectedAccounts.length} sélectionnés)
+                Accounts ({selectedAccounts.length} selected)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {accounts.map((account) => (
@@ -472,14 +472,14 @@ export default function ShareToSocialMedia({
               </div>
               {accounts.length === 0 && (
                 <p className="text-center text-gray-500 py-4">
-                  Aucun compte connecté.{" "}
+                  No accounts connected.{" "}
                   <a
                     href="https://getlate.dev"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    Connecter des comptes
+                    Connect accounts
                   </a>
                 </p>
               )}
@@ -489,23 +489,23 @@ export default function ShareToSocialMedia({
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm text-gray-400">
-                  Texte de publication (optionnel)
+                  Post text (optional)
                 </label>
                 <button
                   onClick={generateContent}
                   disabled={generatingContent}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg hover:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Générer avec l'IA"
+                  title="Generate with AI"
                 >
                   {generatingContent ? (
                     <>
                       <div className="animate-spin w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full" />
-                      <span>Génération...</span>
+                      <span>Generating...</span>
                     </>
                   ) : (
                     <>
                       <span>✨</span>
-                      <span>Générer avec l'IA</span>
+                      <span>Generate with AI</span>
                     </>
                   )}
                 </button>
@@ -513,7 +513,7 @@ export default function ShareToSocialMedia({
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Ajoutez un texte à votre publication..."
+                placeholder="Add text to your post..."
                 rows={3}
                 className="w-full px-4 py-3 bg-surface-light border border-border rounded-xl focus:border-primary focus:outline-none resize-none"
               />
@@ -527,17 +527,17 @@ export default function ShareToSocialMedia({
                   onClick={generateHashtags}
                   disabled={generatingHashtags}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-lg hover:border-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Générer avec l'IA"
+                  title="Generate with AI"
                 >
                   {generatingHashtags ? (
                     <>
                       <div className="animate-spin w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full" />
-                      <span>Génération...</span>
+                      <span>Generating...</span>
                     </>
                   ) : (
                     <>
                       <span>✨</span>
-                      <span>Générer avec l'IA</span>
+                      <span>Generate with AI</span>
                     </>
                   )}
                 </button>
@@ -548,7 +548,7 @@ export default function ShareToSocialMedia({
                   value={hashtagInput}
                   onChange={(e) => setHashtagInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleAddHashtag()}
-                  placeholder="Ajouter un hashtag"
+                  placeholder="Add a hashtag"
                   className="flex-1 px-4 py-2 bg-surface-light border border-border rounded-lg focus:border-primary focus:outline-none"
                 />
                 <button
@@ -578,7 +578,7 @@ export default function ShareToSocialMedia({
 
             {/* Scheduling Options */}
             <div className="mb-6 p-4 bg-surface-light rounded-xl border border-border">
-              <h4 className="font-semibold mb-3">Programmation</h4>
+              <h4 className="font-semibold mb-3">Scheduling</h4>
               
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -592,10 +592,10 @@ export default function ShareToSocialMedia({
                     className="w-4 h-4 accent-primary"
                   />
                   <div>
-                    <span className="font-medium">Utiliser le calendrier</span>
+                    <span className="font-medium">Use schedule</span>
                     {nextSlot && (
                       <p className="text-xs text-gray-400">
-                        Prochain créneau : {formatDate(nextSlot)}
+                        Next slot: {formatDate(nextSlot)}
                       </p>
                     )}
                   </div>
@@ -611,7 +611,7 @@ export default function ShareToSocialMedia({
                     }}
                     className="w-4 h-4 accent-primary"
                   />
-                  <span className="font-medium">Publier immédiatement</span>
+                  <span className="font-medium">Publish immediately</span>
                 </label>
               </div>
 
@@ -619,17 +619,17 @@ export default function ShareToSocialMedia({
               {useQueue && !publishNow && templates.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <label className="block text-sm text-gray-400 mb-2">
-                    Modèle de calendrier
+                    Schedule template
                   </label>
                   <select
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
                     className="w-full px-3 py-2 bg-surface-dark border border-border rounded-lg focus:border-primary focus:outline-none text-sm"
                   >
-                    <option value="">Par défaut</option>
+                    <option value="">Default</option>
                     {templates.map((template) => (
                       <option key={template.id} value={template.id}>
-                        {template.name} {template.isDefault && "(défaut)"}
+                        {template.name} {template.isDefault && "(default)"}
                       </option>
                     ))}
                   </select>
@@ -643,7 +643,7 @@ export default function ShareToSocialMedia({
                 onClick={onClose}
                 className="flex-1 py-3 bg-surface-light border border-border rounded-xl hover:border-primary/50 transition-all"
               >
-                Annuler
+                Cancel
               </button>
               <button
                 onClick={handlePost}
@@ -653,12 +653,12 @@ export default function ShareToSocialMedia({
                 {posting ? (
                   <>
                     <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                    Publication...
+                    Publishing...
                   </>
                 ) : publishNow ? (
-                  "Publier maintenant"
+                  "Publish now"
                 ) : (
-                  "Programmer"
+                  "Schedule"
                 )}
               </button>
             </div>

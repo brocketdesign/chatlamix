@@ -39,19 +39,19 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: "system",
-            content: `Tu es un expert en création de contenu pour les réseaux sociaux. 
-Tu crées des textes engageants, accrocheurs et adaptés aux plateformes sociales.
-Le texte doit être court (2-3 phrases max), percutant et inciter à l'engagement.
-N'inclus PAS de hashtags dans ta réponse (ils seront ajoutés séparément).
-Utilise des emojis de manière modérée pour rendre le texte plus vivant.
-Réponds uniquement avec le texte de publication, sans introduction ni explication.`,
+            content: `You are an expert in creating content for social media. 
+You create engaging, catchy texts adapted to social platforms.
+The text should be short (2-3 sentences max), impactful and encourage engagement.
+Do NOT include hashtags in your response (they will be added separately).
+Use emojis moderately to make the text more lively.
+Respond only with the publication text, without introduction or explanation.`,
           },
           {
             role: "user",
-            content: `Génère un texte de publication pour les réseaux sociaux (${platformNames}) pour partager une image d'un personnage nommé "${characterName}".
-${imagePrompt ? `Description de l'image : ${imagePrompt}` : ""}
+            content: `Generate a social media post text (${platformNames}) to share an image of a character named "${characterName}".
+${imagePrompt ? `Image description: ${imagePrompt}` : ""}
 
-Le texte doit être engageant et donner envie aux gens d'interagir avec la publication.`,
+The text should be engaging and make people want to interact with the post.`,
           },
         ],
         max_tokens: 200,
@@ -70,19 +70,19 @@ Le texte doit être engageant et donner envie aux gens d'interagir avec la publi
         messages: [
           {
             role: "system",
-            content: `Tu es un expert en marketing sur les réseaux sociaux.
-Tu génères des hashtags pertinents et populaires pour maximiser la visibilité des publications.
-Génère entre 5 et 10 hashtags.
-Réponds UNIQUEMENT avec les hashtags séparés par des espaces, sans le symbole #.
-Par exemple: "art digital character illustration creative"
-Ne mets pas de # devant les mots, juste les mots séparés par des espaces.`,
+            content: `You are a social media marketing expert.
+You generate relevant and popular hashtags to maximize post visibility.
+Generate between 5 and 10 hashtags.
+Respond ONLY with hashtags separated by spaces, without the # symbol.
+For example: "art digital character illustration creative"
+Do not put # in front of the words, just the words separated by spaces.`,
           },
           {
             role: "user",
-            content: `Génère des hashtags pertinents pour une publication sur les réseaux sociaux présentant une image d'un personnage nommé "${characterName}".
-${imagePrompt ? `Description de l'image : ${imagePrompt}` : ""}
+            content: `Generate relevant hashtags for a social media post featuring an image of a character named "${characterName}".
+${imagePrompt ? `Image description: ${imagePrompt}` : ""}
 
-Les hashtags doivent être un mélange de tags populaires et de tags spécifiques pour maximiser la portée.`,
+The hashtags should be a mix of popular tags and specific tags to maximize reach.`,
           },
         ],
         max_tokens: 100,
