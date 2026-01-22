@@ -1,6 +1,5 @@
 "use client";
 
-import { dynamic } from "next/dynamic";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import { UserButton } from "@/components/auth/UserButton";

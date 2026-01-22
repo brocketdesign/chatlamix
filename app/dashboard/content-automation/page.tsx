@@ -153,7 +153,7 @@ export default function ContentAutomationPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLoading, user, selectedCharacter]);
+  }, [selectedCharacter]);
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -837,10 +837,12 @@ export default function ContentAutomationPage() {
                                     }`}
                                   >
                                     {account.profilePicture ? (
-                                      <img
+                                      <Image
                                         src={account.profilePicture}
                                         alt={account.displayName}
-                                        className="w-5 h-5 rounded-full object-cover"
+                                        width={20}
+                                        height={20}
+                                        className="rounded-full object-cover"
                                       />
                                     ) : (
                                       <span>{platformInfo?.icon || "📱"}</span>
@@ -956,10 +958,12 @@ export default function ContentAutomationPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
                         {character?.thumbnail && (
-                          <img
+                          <Image
                             src={character.thumbnail}
                             alt={character.name}
-                            className="w-12 h-12 rounded-full object-cover"
+                            width={48}
+                            height={48}
+                            className="rounded-full object-cover"
                           />
                         )}
                         <div>
@@ -1177,9 +1181,11 @@ export default function ContentAutomationPage() {
                     </h3>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <img
+                        <Image
                           src={generatedImage.imageUrl}
                           alt="Generated"
+                          width={600}
+                          height={600}
                           className="w-full rounded-lg"
                         />
                       </div>

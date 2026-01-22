@@ -90,7 +90,7 @@ export default function SocialMediaSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLoading, user]);
+  }, [selectedProfile]);
 
   const loadAccounts = useCallback(async () => {
     try {

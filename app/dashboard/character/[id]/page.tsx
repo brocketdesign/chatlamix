@@ -677,10 +677,12 @@ export default function CharacterManagePage() {
                   {/* Show current base face status */}
                   {customBaseFace ? (
                     <div className="flex items-start gap-3">
-                      <img
+                      <Image
                         src={customBaseFace}
                         alt="Uploaded base face"
-                        className="w-16 h-16 rounded-lg object-cover border-2 border-primary"
+                        width={64}
+                        height={64}
+                        className="rounded-lg object-cover border-2 border-primary"
                       />
                       <div className="flex-1">
                         <p className="text-xs text-primary-light mb-2">
@@ -704,10 +706,12 @@ export default function CharacterManagePage() {
                     </div>
                   ) : character.mainFaceImage ? (
                     <div className="flex items-start gap-3">
-                      <img
+                      <Image
                         src={character.mainFaceImage}
                         alt="Main face"
-                        className="w-16 h-16 rounded-lg object-cover border border-green-500/50"
+                        width={64}
+                        height={64}
+                        className="rounded-lg object-cover border border-green-500/50"
                       />
                       <div className="flex-1">
                         <p className="text-xs text-green-400 mb-2">
@@ -1162,10 +1166,11 @@ export default function CharacterManagePage() {
                       }`}
                       onClick={isSelectionMode ? () => toggleImageSelection(image.id) : undefined}
                     >
-                      <img
+                      <Image
                         src={image.imageUrl}
                         alt="Generated"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       
                       {/* Selection checkbox */}
@@ -1361,10 +1366,12 @@ export default function CharacterManagePage() {
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative">
                     {character.thumbnail ? (
-                      <img
+                      <Image
                         src={character.thumbnail}
                         alt={`${character.name} profile`}
-                        className="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg shadow-primary/20"
+                        width={128}
+                        height={128}
+                        className="rounded-full object-cover border-4 border-primary shadow-lg shadow-primary/20"
                       />
                     ) : (
                       <div className="w-32 h-32 rounded-full gradient-primary flex items-center justify-center">
@@ -1660,10 +1667,11 @@ export default function CharacterManagePage() {
                           : 'border-border hover:border-primary/50'
                       } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                      <img
+                      <Image
                         src={image.imageUrl}
                         alt="Gallery image"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       {character.thumbnail === image.imageUrl && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">

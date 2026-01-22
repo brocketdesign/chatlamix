@@ -293,10 +293,12 @@ export default function FavoritesPage() {
                         className="absolute bottom-2 left-2 z-10"
                       >
                         <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-lg hover:scale-110 transition-transform">
-                          <img
+                          <Image
                             src={image.character.thumbnail}
                             alt={image.character.name}
-                            className="w-full h-full object-cover"
+                            width={32}
+                            height={32}
+                            className="object-cover"
                           />
                         </div>
                       </Link>
