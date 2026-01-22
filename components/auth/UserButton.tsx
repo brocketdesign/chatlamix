@@ -41,15 +41,14 @@ export function UserButton({ afterSignOutUrl = "/" }: UserButtonProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-semibold hover:opacity-90 transition-opacity"
+        className="relative w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-semibold hover:opacity-90 transition-opacity overflow-hidden"
       >
         {user.user_metadata?.avatar_url ? (
           <Image
             src={user.user_metadata.avatar_url}
             alt="Avatar"
-            width={40}
-            height={40}
-            className="rounded-full object-cover object-top"
+            fill
+            className="object-cover object-top"
           />
         ) : (
           initials

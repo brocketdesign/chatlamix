@@ -146,15 +146,16 @@ export default function CharacterProfile() {
       <div className="max-w-4xl mx-auto p-6">
         {/* Character Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
-          <div className="relative flex-shrink-0">
+          <div className="relative flex-shrink-0 w-32 h-32">
             <div className="absolute inset-0 rounded-full gradient-primary blur-md opacity-60" />
-            <Image
-              src={character.thumbnail}
-              alt={character.name}
-              width={128}
-              height={128}
-              className="relative rounded-full border-4 border-primary object-cover object-top"
-            />
+            <div className="relative w-full h-full rounded-full border-4 border-primary overflow-hidden">
+              <Image
+                src={character.thumbnail}
+                alt={character.name}
+                fill
+                className="object-cover object-top"
+              />
+            </div>
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-2 flex-wrap">
@@ -216,7 +217,7 @@ export default function CharacterProfile() {
               <div
                 key={index}
                 onClick={() => handleImageClick(index)}
-                className="aspect-[3/4] rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all group cursor-pointer"
+                className="aspect-[3/4] rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all group cursor-pointer relative"
               >
                 <Image
                   src={image}

@@ -534,13 +534,14 @@ export default function ChatPage() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full gradient-primary blur-sm opacity-50 scale-110" />
             {character.thumbnail ? (
-              <Image
-                src={character.thumbnail}
-                alt={character.name}
-                width={40}
-                height={40}
-                className="relative rounded-full object-cover object-top border-2 border-primary"
-              />
+              <div className="relative w-10 h-10 rounded-full border-2 border-primary overflow-hidden">
+                <Image
+                  src={character.thumbnail}
+                  alt={character.name}
+                  fill
+                  className="object-cover object-top"
+                />
+              </div>
             ) : (
               <div className="relative w-10 h-10 rounded-full gradient-primary border-2 border-primary" />
             )}

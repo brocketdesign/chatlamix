@@ -292,12 +292,11 @@ export default function FavoritesPage() {
                         onClick={(e) => e.stopPropagation()}
                         className="absolute bottom-2 left-2 z-10"
                       >
-                        <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-lg hover:scale-110 transition-transform">
+                        <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-lg hover:scale-110 transition-transform relative">
                           <Image
                             src={image.character.thumbnail}
                             alt={image.character.name}
-                            width={32}
-                            height={32}
+                            fill
                             className="object-cover object-top"
                           />
                         </div>
@@ -397,8 +396,7 @@ export default function FavoritesPage() {
                             <Image
                               src={character.thumbnail}
                               alt={character.name}
-                              width={80}
-                              height={80}
+                              fill
                               className="object-cover object-top"
                             />
                           </div>

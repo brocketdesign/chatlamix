@@ -470,13 +470,15 @@ export default function ContentAutomationPage() {
                 }`}
               >
                 {char.thumbnail && (
-                  <Image
-                    src={char.thumbnail}
-                    alt={char.name}
-                    width={32}
-                    height={32}
-                    className="rounded-full object-cover object-top"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    <Image
+                      src={char.thumbnail}
+                      alt={char.name}
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
                 )}
                 <span>{char.name}</span>
               </button>
@@ -958,13 +960,15 @@ export default function ContentAutomationPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
                         {character?.thumbnail && (
-                          <Image
-                            src={character.thumbnail}
-                            alt={character.name}
-                            width={48}
-                            height={48}
-                            className="rounded-full object-cover object-top"
-                          />
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                            <Image
+                              src={character.thumbnail}
+                              alt={character.name}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover object-top"
+                            />
+                          </div>
                         )}
                         <div>
                           <h3 className="text-lg font-bold text-white">

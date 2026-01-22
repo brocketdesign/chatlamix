@@ -218,13 +218,14 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
                 aria-label={`View ${currentCharacter.name}'s profile`}
               >
                 <div className="absolute inset-0 rounded-full gradient-primary blur-sm opacity-60" />
-                <Image
-                  src={currentCharacter.thumbnail}
-                  alt={currentCharacter.name}
-                  width={64}
-                  height={64}
-                  className="relative rounded-full border-2 border-primary object-cover object-top hover:border-white transition-colors"
-                />
+                <div className="relative w-16 h-16 rounded-full border-2 border-primary overflow-hidden hover:border-white transition-colors">
+                  <Image
+                    src={currentCharacter.thumbnail}
+                    alt={currentCharacter.name}
+                    fill
+                    className="object-cover object-top"
+                  />
+                </div>
               </Link>
             </div>
             <div className="flex-1">

@@ -330,18 +330,16 @@ function CharacterCard({
   return (
     <div className="glass border border-border rounded-2xl overflow-hidden hover:border-primary/50 transition-colors group">
       {/* Thumbnail */}
-      <div className="aspect-square relative bg-surface-light flex items-center justify-center">
+      <div className="aspect-square relative bg-surface-light">
         {character.thumbnail ? (
-          <div className="w-3/4 aspect-square relative rounded-full overflow-hidden border-4 border-primary">
-            <Image
-              src={character.thumbnail}
-              alt={character.name}
-              fill
-              className="object-cover object-top"
-            />
-          </div>
+          <Image
+            src={character.thumbnail}
+            alt={character.name}
+            fill
+            className="object-cover"
+          />
         ) : (
-          <div className="w-3/4 aspect-square rounded-full flex items-center justify-center text-6xl gradient-primary opacity-50">
+          <div className="w-full h-full flex items-center justify-center text-6xl">
             👤
           </div>
         )}

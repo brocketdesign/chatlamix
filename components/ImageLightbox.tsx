@@ -562,14 +562,13 @@ export function ImageLightbox({
             ) : (
               comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-surface-light flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-surface-light flex items-center justify-center overflow-hidden flex-shrink-0 relative">
                     {comment.profiles?.avatar_url ? (
                       <Image 
                         src={comment.profiles.avatar_url} 
                         alt="" 
-                        width={32}
-                        height={32}
-                        className="w-full h-full object-cover" 
+                        fill
+                        className="object-cover object-top" 
                       />
                     ) : (
                       <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
