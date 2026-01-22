@@ -230,11 +230,106 @@ export async function POST(request: NextRequest) {
       hasPhysicalAttributes: !!character.physical_attributes,
     });
 
-    // (rest of POST to be added in subsequent commits)
+    // Deduct coins
+    log("POST - Starting coin deduction", { cost: CHAT_IMAGE_COST });
+    let coinDeductionSuccess = false;
+    let newBalance: number | null = null;
+    
+    try {
+      const { data: deductResult, error: deductError } = await supabase
+        .rpc('deduct_coins', {
+          p_user_id: user.id,
+          p_amount: CHAT_IMAGE_COST,
+          p_transaction_type: 'image_generation',
+          p_reference_type: 'chat_image',
+          p_reference_id: characterId,
+          p_description: `Chat image generation for ${character.name}`
+        });
 
-    return NextResponse.json({ success: true, message: "scaffolded" });
+      if (deductError) {
+        if (deductError.message?.includes('does not exist') || deductError.code === '42883') {
+          log("POST - Coin system not set up, allowing free generation");
+          coinDeductionSuccess = true;
+        } else {
+          log("POST - Coin deduction error", { error: deductError.message });
+          return NextResponse.json(
+            { error: "Failed to deduct coins", message: "Unable to process payment." },
+            { status: 500 }
+          );
+        }
+      } else if (deductResult && deductResult.length > 0) {
+        const result = deductResult[0];
+        if (result.success) {
+          coinDeductionSuccess = true;
+          newBalance = result.new_balance;
+          log("POST - Coins deducted successfully", { newBalance });
+        } else {
+          log("POST - Insufficient coins", { required: CHAT_IMAGE_COST });
+          return NextResponse.json(
+            { 
+              error: "Insufficient coins", 
+              required: CHAT_IMAGE_COST,
+              message: `You need ${CHAT_IMAGE_COST} coins to generate this image.`
+            },
+            { status: 402 }
+          );
+        }
+      } else {
+        // Fallback: manual balance check and deduction
+        log("POST - Fallback coin check");
+        const { data: balanceData } = await supabase
+          .from('user_coin_balances')
+          .select('balance, lifetime_spent')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!balanceData || balanceData.balance < CHAT_IMAGE_COST) {
+          log("POST - Insufficient coins (fallback)", { balance: balanceData?.balance });
+          return NextResponse.json(
+            { 
+              error: "Insufficient coins", 
+              required: CHAT_IMAGE_COST,
+              currentBalance: balanceData?.balance || 0,
+              message: `You need ${CHAT_IMAGE_COST} coins. You have ${balanceData?.balance || 0} coins.`
+            },
+            { status: 402 }
+          );
+        }
+        
+        const { data: updated } = await supabase
+          .from('user_coin_balances')
+          .update({ 
+            balance: balanceData.balance - CHAT_IMAGE_COST,
+            lifetime_spent: (balanceData.lifetime_spent || 0) + CHAT_IMAGE_COST
+          })
+          .eq('user_id', user.id)
+          .select('balance')
+          .single();
+        
+        if (updated) {
+          coinDeductionSuccess = true;
+          newBalance = updated.balance;
+          log("POST - Coins deducted (fallback)", { newBalance });
+        }
+      }
+    } catch (coinError) {
+      log("POST - Coin system check failed, allowing generation", { error: String(coinError) });
+      coinDeductionSuccess = true;
+    }
+
+    if (!coinDeductionSuccess) {
+      log("POST - Coin deduction failed");
+      return NextResponse.json(
+        { error: "Failed to process coin payment" },
+        { status: 500 }
+      );
+    }
+
+    // Continue with prompt building and image generation in next commit
+
+    return NextResponse.json({ success: true, message: "coins-deducted" });
   } catch (error) {
-    log("POST - Unexpected error (scaffold)", { error: String(error) });
+    log("POST - Unexpected error (coin-flow)", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to generate image" },
       { status: 500 }
