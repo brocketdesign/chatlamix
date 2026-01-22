@@ -80,6 +80,9 @@ export interface PhysicalAttributes {
   makeup: string; // e.g., "natural", "glamorous", "minimal"
 }
 
+// Gallery status for managing image visibility
+export type GalleryStatus = 'unposted' | 'posted' | 'archived';
+
 // Character image with metadata
 export interface CharacterImage {
   id: string;
@@ -89,6 +92,7 @@ export interface CharacterImage {
   isMainFace: boolean;
   createdAt: Date;
   settings?: ImageGenerationSettings;
+  galleryStatus: GalleryStatus; // 'unposted' = pending review, 'posted' = in gallery, 'archived' = hidden
 }
 
 // Settings for image generation
@@ -118,6 +122,9 @@ export interface GeneratedTags {
   category: string;
 }
 
+// Chat message types
+export type ChatMessageType = "text" | "image" | "gift";
+
 // Chat message with enhanced context
 export interface ChatMessage {
   id: string;
@@ -127,6 +134,10 @@ export interface ChatMessage {
   text: string;
   timestamp: Date;
   emotion?: string; // Character's emotional state during response
+  messageType?: ChatMessageType;
+  imageUrl?: string;
+  imageId?: string;
+  giftId?: string;
 }
 
 // Chat session
@@ -138,6 +149,47 @@ export interface ChatSession {
   relationshipProgress: number; // Track relationship development
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Chat image (generated from messages)
+export interface ChatImage {
+  id: string;
+  sessionId: string;
+  messageId?: string;
+  characterId: string;
+  userId: string;
+  imageUrl: string;
+  prompt: string;
+  coinCost: number;
+  settings?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+// Chat gift
+export interface ChatGift {
+  id: string;
+  sessionId: string;
+  characterId: string;
+  userId: string;
+  giftType: string;
+  giftName: string;
+  coinCost: number;
+  message?: string;
+  characterResponse?: string;
+  createdAt: Date;
+}
+
+// Gift type definition
+export interface GiftType {
+  id: string;
+  name: string;
+  displayName: string;
+  emoji: string;
+  coinCost: number;
+  description?: string;
+  category: string;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 // Filter options for gallery
@@ -379,6 +431,7 @@ export interface ContentGenerationSchedule {
   autoPost: boolean;
   schedulingTemplateId?: string;
   targetPlatforms: SocialPlatform[];
+  autoConnectToScheduleTemplate?: boolean;
   
   // Execution tracking
   lastExecutedAt?: Date;
@@ -501,6 +554,7 @@ export interface CreateContentScheduleRequest {
   autoPost?: boolean;
   schedulingTemplateId?: string;
   targetPlatforms?: SocialPlatform[];
+  autoConnectToScheduleTemplate?: boolean;
 }
 
 // Request to execute content generation

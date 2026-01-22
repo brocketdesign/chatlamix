@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Link from "next/link";
+import Navigation from "@/components/Navigation";
 import {
   Character,
   ContentGenerationSchedule,
@@ -13,6 +14,7 @@ import {
   GeneratedContent,
   SchedulingTemplate,
   SocialPlatform,
+  LateAccount,
 } from "@/lib/types";
 
 const CONTENT_TYPES: { value: ContentType; label: string; icon: string }[] = [
@@ -56,6 +58,10 @@ const PLATFORM_OPTIONS: { value: SocialPlatform; label: string; icon: string }[]
   { value: "twitter", label: "X/Twitter", icon: "𝕏" },
   { value: "facebook", label: "Facebook", icon: "📘" },
   { value: "linkedin", label: "LinkedIn", icon: "💼" },
+  { value: "youtube", label: "YouTube", icon: "▶️" },
+  { value: "pinterest", label: "Pinterest", icon: "📌" },
+  { value: "threads", label: "Threads", icon: "🧵" },
+  { value: "bluesky", label: "Bluesky", icon: "🦋" },
 ];
 
 export default function ContentAutomationPage() {
@@ -70,6 +76,7 @@ export default function ContentAutomationPage() {
   const [schedules, setSchedules] = useState<ContentGenerationSchedule[]>([]);
   const [templates, setTemplates] = useState<SchedulingTemplate[]>([]);
   const [generatedContent, setGeneratedContent] = useState<any[]>([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<LateAccount[]>([]);
 
   // Form states
   const [selectedCharacter, setSelectedCharacter] = useState("");
@@ -93,6 +100,7 @@ export default function ContentAutomationPage() {
     autoPost: false,
     targetPlatforms: [] as SocialPlatform[],
     schedulingTemplateId: "",
+    autoConnectToScheduleTemplate: false,
   });
   const [customThemeInput, setCustomThemeInput] = useState("");
 
@@ -113,11 +121,12 @@ export default function ContentAutomationPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [charsRes, schedulesRes, templatesRes, contentRes] = await Promise.all([
+      const [charsRes, schedulesRes, templatesRes, contentRes, accountsRes] = await Promise.all([
         fetch("/api/characters"),
         fetch("/api/content-generation"),
         fetch("/api/social-media/schedule-template"),
         fetch("/api/content-generation/execute?limit=20"),
+        fetch("/api/social-media?type=accounts"),
       ]);
 
       if (charsRes.ok) {
@@ -138,6 +147,11 @@ export default function ContentAutomationPage() {
 
       if (contentRes.ok) {
         setGeneratedContent(await contentRes.json());
+      }
+
+      if (accountsRes.ok) {
+        const accountsData = await accountsRes.json();
+        setConnectedAccounts(Array.isArray(accountsData) ? accountsData : []);
       }
     } catch (err) {
       console.error("Error loading data:", err);
@@ -345,6 +359,7 @@ export default function ContentAutomationPage() {
       autoPost: false,
       targetPlatforms: [],
       schedulingTemplateId: "",
+      autoConnectToScheduleTemplate: false,
     });
     setCustomThemeInput("");
   }
@@ -397,7 +412,7 @@ export default function ContentAutomationPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
       </div>
     );
@@ -405,7 +420,7 @@ export default function ContentAutomationPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Login Required</h1>
           <Link href="/sign-in" className="text-pink-400 hover:text-pink-300">
@@ -419,24 +434,10 @@ export default function ContentAutomationPage() {
   const selectedCharacterData = characters.find((c) => c.id === selectedCharacter);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-gray-400 hover:text-white">
-                ← Back
-              </Link>
-              <h1 className="text-2xl font-bold text-white">
-                🤖 Content Automation
-              </h1>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-950">
+      <Navigation title="Content Automation" />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Alerts */}
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-200">
@@ -814,21 +815,52 @@ export default function ContentAutomationPage() {
                     <div className="ml-8 space-y-3">
                       <div>
                         <span className="text-gray-400 text-sm">Target Platforms</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {PLATFORM_OPTIONS.map((platform) => (
-                            <button
-                              key={platform.value}
-                              onClick={() => togglePlatform(platform.value)}
-                              className={`px-3 py-2 rounded-lg text-sm transition-all ${
-                                newSchedule.targetPlatforms.includes(platform.value)
-                                  ? "bg-pink-500/20 text-pink-300 border border-pink-500"
-                                  : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
-                              }`}
-                            >
-                              {platform.icon} {platform.label}
-                            </button>
-                          ))}
-                        </div>
+                        {connectedAccounts.length > 0 ? (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {connectedAccounts
+                              .filter((account) => account.isActive)
+                              .map((account) => {
+                                const platformInfo = PLATFORM_OPTIONS.find(
+                                  (p) => p.value === account.platform
+                                );
+                                return (
+                                  <button
+                                    key={account._id}
+                                    onClick={() => togglePlatform(account.platform)}
+                                    className={`px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2 ${
+                                      newSchedule.targetPlatforms.includes(account.platform)
+                                        ? "bg-pink-500/20 text-pink-300 border border-pink-500"
+                                        : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                                    }`}
+                                  >
+                                    {account.profilePicture ? (
+                                      <img
+                                        src={account.profilePicture}
+                                        alt={account.displayName}
+                                        className="w-5 h-5 rounded-full object-cover"
+                                      />
+                                    ) : (
+                                      <span>{platformInfo?.icon || "📱"}</span>
+                                    )}
+                                    <span>{platformInfo?.label || account.platform}</span>
+                                    <span className="text-xs opacity-70">@{account.username}</span>
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                            <p className="text-yellow-300 text-sm">
+                              No social media accounts connected.{" "}
+                              <Link
+                                href="/dashboard/social-settings"
+                                className="underline hover:text-yellow-200"
+                              >
+                                Connect accounts in Social Media Settings
+                              </Link>
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {templates.length > 0 && (
@@ -854,6 +886,30 @@ export default function ContentAutomationPage() {
                             ))}
                           </select>
                         </div>
+                      )}
+
+                      {templates.length > 0 && newSchedule.schedulingTemplateId && (
+                        <label className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                          <input
+                            type="checkbox"
+                            checked={newSchedule.autoConnectToScheduleTemplate}
+                            onChange={(e) =>
+                              setNewSchedule((prev) => ({
+                                ...prev,
+                                autoConnectToScheduleTemplate: e.target.checked,
+                              }))
+                            }
+                            className="w-5 h-5 rounded"
+                          />
+                          <div>
+                            <span className="text-emerald-300 font-medium">
+                              🔗 Auto-queue to available slots
+                            </span>
+                            <p className="text-gray-400 text-xs mt-1">
+                              Automatically add generated content to the next available slots in your scheduling template
+                            </p>
+                          </div>
+                        </label>
                       )}
                     </div>
                   )}
@@ -1070,7 +1126,7 @@ export default function ContentAutomationPage() {
                               {suggestion.prompt}
                             </p>
                             <p className="text-gray-400 text-sm italic">
-                              "{suggestion.caption}"
+                              &ldquo;{suggestion.caption}&rdquo;
                             </p>
                             <div className="flex flex-wrap gap-1 mt-2">
                               {suggestion.hashtags.slice(0, 5).map((tag) => (

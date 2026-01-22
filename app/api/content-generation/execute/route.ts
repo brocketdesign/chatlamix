@@ -213,20 +213,146 @@ export async function POST(request: NextRequest) {
 
     // Auto-post if enabled
     let socialPostResult = null;
-    if (autoPost || schedule?.auto_post) {
-      const targetPlatforms = schedule?.target_platforms || [];
-      const templateId = schedule?.scheduling_template_id;
+    const shouldAutoConnect = schedule?.auto_connect_to_schedule_template;
+    const shouldAutoPost = autoPost || schedule?.auto_post;
+    const targetPlatforms = schedule?.target_platforms || [];
+    const templateId = schedule?.scheduling_template_id;
 
-      if (targetPlatforms.length > 0) {
-        // This would integrate with the social-media API
-        // For now, we'll just return the content and let the user post manually
+    if ((shouldAutoPost || shouldAutoConnect) && templateId && targetPlatforms.length > 0) {
+      try {
+        // Get the scheduling template to find profile info
+        const { data: template } = await supabase
+          .from("scheduling_templates")
+          .select("*")
+          .eq("id", templateId)
+          .single();
+
+        if (template && template.late_profile_id) {
+          // Get user's social config for API key
+          const { data: userConfig } = await supabase
+            .from("user_social_config")
+            .select("late_api_key")
+            .eq("user_id", user.id)
+            .single();
+
+          const apiKey = userConfig?.late_api_key || process.env.LATE_API_KEY;
+
+          if (apiKey) {
+            // Get connected accounts for the profile
+            const accountsRes = await fetch(
+              `https://getlate.dev/api/v1/accounts?profileId=${template.late_profile_id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (accountsRes.ok) {
+              const accountsData = await accountsRes.json();
+              const accounts = accountsData.accounts || [];
+
+              // Filter accounts by target platforms
+              const platformAccounts = accounts.filter((acc: any) =>
+                targetPlatforms.includes(acc.platform)
+              );
+
+              if (platformAccounts.length > 0) {
+                // Build the post content
+                const hashtagString = hashtags?.length
+                  ? "\n\n" + hashtags.map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ")
+                  : "";
+
+                // Create post via Late API to queue at next available slot
+                const postPayload = {
+                  content: (caption || "") + hashtagString,
+                  mediaItems: [
+                    {
+                      url: imageResult.image?.imageUrl,
+                      type: "image",
+                    },
+                  ],
+                  platforms: platformAccounts.map((acc: any) => ({
+                    platform: acc.platform,
+                    accountId: acc._id,
+                  })),
+                  queuedFromProfile: template.late_profile_id,
+                  queueId: template.late_queue_id,
+                };
+
+                const postRes = await fetch("https://getlate.dev/api/v1/posts", {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(postPayload),
+                });
+
+                if (postRes.ok) {
+                  const postData = await postRes.json();
+                  
+                  // Save locally
+                  await supabase.from("social_media_posts").insert({
+                    user_id: user.id,
+                    character_id: characterId,
+                    character_image_id: imageResult.image?.id,
+                    image_url: imageResult.image?.imageUrl,
+                    content: caption,
+                    hashtags,
+                    platforms: targetPlatforms,
+                    late_post_id: postData.post?._id,
+                    scheduled_for: postData.post?.scheduledFor,
+                    status: postData.post?.status || "scheduled",
+                  });
+
+                  // Update generated content status
+                  if (generatedContent?.id) {
+                    await supabase
+                      .from("generated_content")
+                      .update({
+                        status: "scheduled",
+                        social_post_id: postData.post?._id,
+                      })
+                      .eq("id", generatedContent.id);
+                  }
+
+                  socialPostResult = {
+                    status: "scheduled",
+                    platforms: targetPlatforms,
+                    scheduledFor: postData.post?.scheduledFor,
+                    templateId,
+                    latePostId: postData.post?._id,
+                    message: "Content queued to next available slot",
+                  };
+                } else {
+                  socialPostResult = {
+                    status: "failed",
+                    error: "Failed to create post via Late API",
+                    platforms: targetPlatforms,
+                  };
+                }
+              }
+            }
+          }
+        }
+      } catch (socialError) {
+        console.error("Error auto-connecting to schedule template:", socialError);
         socialPostResult = {
-          status: "ready_to_post",
+          status: "error",
+          error: "Failed to auto-queue content",
           platforms: targetPlatforms,
-          scheduledFor,
-          templateId,
         };
       }
+    } else if (shouldAutoPost && targetPlatforms.length > 0) {
+      // Legacy behavior: return ready_to_post status
+      socialPostResult = {
+        status: "ready_to_post",
+        platforms: targetPlatforms,
+        scheduledFor,
+        templateId,
+      };
     }
 
     return NextResponse.json({

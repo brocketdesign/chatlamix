@@ -122,6 +122,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const characterId = searchParams.get("id");
+    const includeAll = searchParams.get("includeAll") === "true"; // For dashboard management view
+
+    // Get character limits for current user
+    if (type === "limits" && userId) {
+      const { data: isPremium } = await supabase.rpc('user_has_premium', { check_user_id: userId });
+      const characterLimit = isPremium ? CHARACTER_LIMITS.premium : CHARACTER_LIMITS.free;
+
+      const { count: existingCharacterCount } = await supabase
+        .from("characters")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      return NextResponse.json({
+        limit: characterLimit,
+        current: existingCharacterCount || 0,
+        remaining: Math.max(0, characterLimit - (existingCharacterCount || 0)),
+        isPremium: isPremium || false,
+        canCreate: (existingCharacterCount || 0) < characterLimit,
+      });
+    }
 
     // Get single character by ID
     if (characterId) {
@@ -147,13 +167,28 @@ export async function GET(request: NextRequest) {
       }
 
       // Get character images
-      const { data: images } = await supabase
+      // Only show ALL images (including unposted/archived) if owner AND explicitly requested via includeAll
+      const isOwner = character.user_id === userId;
+      const showAllImages = isOwner && includeAll;
+      
+      let imagesQuery = supabase
         .from("character_images")
-        .select("image_url")
+        .select("image_url, gallery_status")
         .eq("character_id", characterId);
+      
+      // Only show posted images unless owner explicitly requests all (dashboard view)
+      if (!showAllImages) {
+        imagesQuery = imagesQuery.eq("gallery_status", "posted");
+      }
+      
+      const { data: images } = await imagesQuery;
 
       const result = transformDbCharacter(character);
-      result.images = images?.map(img => img.image_url) || [];
+      // For public profile view, only show posted images
+      // For dashboard management view (includeAll), show all images for owner
+      result.images = images
+        ?.filter(img => showAllImages || img.gallery_status === 'posted')
+        .map(img => img.image_url) || [];
 
       return NextResponse.json(result);
     }
@@ -184,13 +219,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get images for all characters
+    // Get images for all characters - only posted images for public display
     const characterIds = characters?.map(c => c.id) || [];
     const { data: allImages } = characterIds.length > 0 
       ? await supabase
           .from("character_images")
-          .select("character_id, image_url")
+          .select("character_id, image_url, gallery_status")
           .in("character_id", characterIds)
+          .eq("gallery_status", "posted")  // Only show posted images in lists
       : { data: [] };
 
     // Group images by character
@@ -216,6 +252,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Character limits based on subscription status
+const CHARACTER_LIMITS = {
+  free: 1,
+  premium: 10,
+};
+
 // POST - Create a new character
 export async function POST(request: NextRequest) {
   try {
@@ -226,6 +268,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
+      );
+    }
+
+    // Check premium status and character limits
+    const { data: isPremium } = await supabase.rpc('user_has_premium', { check_user_id: user.id });
+    const characterLimit = isPremium ? CHARACTER_LIMITS.premium : CHARACTER_LIMITS.free;
+
+    // Count existing characters for this user
+    const { count: existingCharacterCount, error: countError } = await supabase
+      .from("characters")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (countError) {
+      console.error("Error counting characters:", countError);
+      return NextResponse.json(
+        { error: "Failed to check character limit" },
+        { status: 500 }
+      );
+    }
+
+    if ((existingCharacterCount || 0) >= characterLimit) {
+      const limitMessage = isPremium 
+        ? `Premium users can create up to ${CHARACTER_LIMITS.premium} characters. You have reached this limit.`
+        : `Free users can only create ${CHARACTER_LIMITS.free} character. Upgrade to Premium to create up to ${CHARACTER_LIMITS.premium} characters.`;
+      
+      return NextResponse.json(
+        { 
+          error: "Character limit reached",
+          message: limitMessage,
+          limit: characterLimit,
+          current: existingCharacterCount || 0,
+          isPremium: isPremium || false
+        },
+        { status: 403 }
       );
     }
 
@@ -328,7 +405,12 @@ export async function PUT(request: NextRequest) {
     if (updates.personality) updateData.personality = updates.personality;
     if (updates.physicalAttributes) updateData.physical_attributes = updates.physicalAttributes;
     if (updates.tags) updateData.tags = updates.tags;
-    if (updates.mainFaceImage) updateData.main_face_image = updates.mainFaceImage;
+    if (updates.mainFaceImage) {
+      updateData.main_face_image = updates.mainFaceImage;
+      console.log("[characters PUT] Updating main_face_image, length:", updates.mainFaceImage.length);
+    }
+
+    console.log("[characters PUT] Update data keys:", Object.keys(updateData));
 
     const { data: updated, error: updateError } = await supabase
       .from("characters")
@@ -344,6 +426,8 @@ export async function PUT(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log("[characters PUT] Updated character main_face_image length:", updated.main_face_image?.length);
 
     return NextResponse.json(transformDbCharacter(updated));
   } catch (error) {

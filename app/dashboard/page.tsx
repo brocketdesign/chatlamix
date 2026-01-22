@@ -2,20 +2,54 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
-import { UserButton } from "@/components/auth/UserButton";
+import Navigation from "@/components/Navigation";
 import Link from "next/link";
 import { Character } from "@/lib/types";
+
+interface PremiumStatus {
+  isPremium: boolean;
+  plan?: { display_name: string };
+  daysRemaining?: number;
+}
+
+interface CoinData {
+  balance?: { balance: number };
+}
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
+  const [premiumStatus, setPremiumStatus] = useState<PremiumStatus | null>(null);
+  const [coinBalance, setCoinBalance] = useState<number>(0);
 
   useEffect(() => {
     if (!isLoading && user) {
       fetchCharacters();
+      fetchMonetizationData();
     }
   }, [isLoading, user]);
+
+  const fetchMonetizationData = async () => {
+    try {
+      const [premiumRes, coinsRes] = await Promise.all([
+        fetch("/api/premium"),
+        fetch("/api/coins"),
+      ]);
+      
+      if (premiumRes.ok) {
+        const data: PremiumStatus = await premiumRes.json();
+        setPremiumStatus(data);
+      }
+      
+      if (coinsRes.ok) {
+        const data: CoinData = await coinsRes.json();
+        setCoinBalance(data.balance?.balance || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching monetization data:", error);
+    }
+  };
 
   const fetchCharacters = async () => {
     try {
@@ -58,29 +92,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-surface-dark text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-10 glass border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-2xl font-bold gradient-text">
-              Chatlamix
-            </Link>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-300">Dashboard</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              Gallery
-            </Link>
-            <UserButton afterSignOutUrl="/" />
-          </div>
-        </div>
-      </header>
+      <Navigation title="Dashboard" />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
@@ -89,6 +103,63 @@ export default function DashboardPage() {
           <p className="text-gray-400">
             Manage your AI influencers and create new characters
           </p>
+        </div>
+
+        {/* Monetization Status Bar */}
+        <div className="glass border border-border rounded-2xl p-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              {/* Coin Balance */}
+              <Link href="/dashboard/coins" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <span className="text-2xl">🪙</span>
+                <div>
+                  <div className="text-sm text-gray-400">Coins</div>
+                  <div className="font-bold text-lg">{coinBalance.toLocaleString()}</div>
+                </div>
+              </Link>
+              
+              <div className="w-px h-10 bg-border hidden sm:block" />
+              
+              {/* Premium Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{premiumStatus?.isPremium ? "👑" : "⭐"}</span>
+                <div>
+                  <div className="text-sm text-gray-400">Status</div>
+                  <div className="font-bold text-lg">
+                    {premiumStatus?.isPremium ? (
+                      <span className="text-primary">{premiumStatus.plan?.display_name || "Premium"}</span>
+                    ) : (
+                      <span className="text-gray-300">Free</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {premiumStatus?.isPremium ? (
+                <Link
+                  href="/dashboard/monetization"
+                  className="px-4 py-2 gradient-primary rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  💰 Monetization Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/monetization/upgrade"
+                  className="px-4 py-2 gradient-primary rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  👑 Upgrade to Premium
+                </Link>
+              )}
+              <Link
+                href="/dashboard/coins"
+                className="px-4 py-2 bg-surface-light border border-border rounded-lg text-sm font-semibold hover:border-primary transition-colors"
+              >
+                + Buy Coins
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -191,9 +262,9 @@ export default function DashboardPage() {
             href="/dashboard/content-automation"
             className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
           >
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 bg-surface-light rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-6 h-6 text-primary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -206,9 +277,92 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-lg mb-1">🤖 Content Automation</h3>
+            <h3 className="font-semibold text-lg mb-1">Content Automation</h3>
             <p className="text-gray-400 text-sm">
               Generate recurring content with AI
+            </p>
+          </Link>
+
+          {/* Monetization Card */}
+          <Link
+            href={premiumStatus?.isPremium ? "/dashboard/monetization" : "/dashboard/monetization/upgrade"}
+            className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
+          >
+            <div className="w-12 h-12 bg-surface-light rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg
+                className="w-6 h-6 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">
+              {premiumStatus?.isPremium ? "Monetization" : "Start Earning"}
+            </h3>
+            <p className="text-gray-400 text-sm">
+              {premiumStatus?.isPremium 
+                ? "View earnings, tiers & analytics" 
+                : "Unlock subscriptions, tips & more"
+              }
+            </p>
+          </Link>
+
+          {/* Discover Card */}
+          <Link
+            href="/discover"
+            className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
+          >
+            <div className="w-12 h-12 bg-surface-light rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg
+                className="w-6 h-6 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">Discover Creators</h3>
+            <p className="text-gray-400 text-sm">
+              Find and follow AI influencers
+            </p>
+          </Link>
+
+          {/* Favorites Card */}
+          <Link
+            href="/dashboard/favorites"
+            className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
+          >
+            <div className="w-12 h-12 bg-surface-light rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <svg
+                className="w-6 h-6 text-pink-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">Your Favorites</h3>
+            <p className="text-gray-400 text-sm">
+              View liked images and followed creators
             </p>
           </Link>
         </div>

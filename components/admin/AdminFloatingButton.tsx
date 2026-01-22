@@ -112,6 +112,7 @@ export function AdminFloatingButton() {
           }
         }
 
+        // Use adminBypass flag to skip Stripe checkout for admin testing
         const response = await fetch("/api/premium", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -119,12 +120,18 @@ export function AdminFloatingButton() {
             planId,
             planName,
             billingCycle: "monthly",
+            adminBypass: true, // Skip Stripe for admin testing
           }),
         });
         
+        const responseData = await response.json();
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Error creating subscription:", errorData.error);
+          console.error("Error creating subscription:", responseData.error);
+        } else if (responseData.checkoutUrl) {
+          // If Stripe returned a checkout URL (adminBypass not supported), redirect
+          window.location.href = responseData.checkoutUrl;
+          return; // Don't refresh status, we're navigating away
         }
       }
 

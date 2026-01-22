@@ -350,6 +350,7 @@ export async function generateImage(
   }
 
   let finalImageUrl = `data:image/${imageFormat};base64,${imageBase64}`;
+  let faceSwapApplied = false;
 
   // Check if character has a main face image for face swapping
   const shouldFaceSwap = character.main_face_image && character.main_face_image.length > 0;
@@ -372,10 +373,40 @@ export async function generateImage(
       if (faceSwapResponse.ok) {
         const faceSwapResult = await faceSwapResponse.json();
         finalImageUrl = faceSwapResult.imageUrl;
+        faceSwapApplied = true;
       }
     } catch (faceSwapError) {
       console.error("Face swap failed, using original image:", faceSwapError);
     }
+  }
+
+  // Upload to Supabase Storage
+  console.log("[generateImage] Uploading to Supabase Storage...");
+  
+  const mimeMatch = finalImageUrl.match(/^data:(image\/[^;]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : `image/${imageFormat}`;
+  const extension = mimeType.split("/")[1] || imageFormat;
+  
+  const fileName = `auto_${characterId}_${Date.now()}.${extension}`;
+  const uploadBuffer = Buffer.from(finalImageUrl.split(",")[1], "base64");
+  
+  let storedImageUrl = finalImageUrl; // Fallback to base64 if upload fails
+  
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("character-images")
+    .upload(fileName, uploadBuffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+  if (!uploadError && uploadData) {
+    const { data: { publicUrl } } = supabase.storage
+      .from("character-images")
+      .getPublicUrl(fileName);
+    storedImageUrl = publicUrl;
+    console.log("[generateImage] Uploaded to storage:", publicUrl);
+  } else if (uploadError) {
+    console.error("[generateImage] Storage upload failed (using base64):", uploadError.message);
   }
 
   // Save the image to Supabase
@@ -383,7 +414,7 @@ export async function generateImage(
     .from("character_images")
     .insert({
       character_id: characterId,
-      image_url: finalImageUrl,
+      image_url: storedImageUrl,
       prompt: fullPrompt,
       is_main_face: !character.main_face_image,
       settings: {
@@ -395,6 +426,7 @@ export async function generateImage(
         width,
         imageFormat,
         quality,
+        faceSwapApplied,
       },
     })
     .select()
@@ -406,12 +438,13 @@ export async function generateImage(
   }
 
   // If this is the first image, set it as thumbnail and main face
+  // Note: main_face_image stays as base64 for face-swap operations
   if (!character.main_face_image || !character.thumbnail) {
     await supabase
       .from("characters")
       .update({
-        main_face_image: finalImageUrl,
-        thumbnail: finalImageUrl,
+        main_face_image: finalImageUrl, // Keep base64 for face swapping
+        thumbnail: storedImageUrl, // Use storage URL for display
       })
       .eq("id", characterId);
   }
@@ -424,6 +457,7 @@ export async function generateImage(
     isMainFace: savedImage.is_main_face,
     createdAt: new Date(savedImage.created_at),
     settings: savedImage.settings,
+    galleryStatus: savedImage.gallery_status || 'unposted',
   };
 
   return {

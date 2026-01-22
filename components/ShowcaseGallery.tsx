@@ -13,6 +13,7 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const [showInstructions, setShowInstructions] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentCharacter = characters[currentCharacterIndex];
@@ -22,6 +23,14 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
     // Reset image index when character changes
     setCurrentImageIndex(0);
   }, [currentCharacterIndex]);
+
+  useEffect(() => {
+    // Hide instructions after 3 seconds
+    const timer = setTimeout(() => {
+      setShowInstructions(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     setTouchEnd(null);
@@ -81,29 +90,46 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen overflow-hidden bg-surface-dark touch-none"
+      className="fixed inset-0 w-full h-full overflow-hidden bg-surface-dark touch-none flex items-center justify-center"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Main Image */}
-      <div className="relative w-full h-full flex items-center justify-center">
+      {/* Main Image Container - TikTok style: full cover on mobile, contained on desktop */}
+      <div className="relative w-full h-full lg:w-auto lg:h-full lg:aspect-[9/16] lg:max-w-[500px]">
         <img
           src={currentCharacter.images[currentImageIndex]}
           alt={`${currentCharacter.name} - Image ${currentImageIndex + 1}`}
-          className="max-w-full max-h-full object-contain transition-opacity duration-300"
+          className="w-full h-full object-cover object-top lg:object-contain lg:object-center transition-opacity duration-300"
         />
 
         {/* Character Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-dark via-surface-dark/80 to-transparent p-6 pb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full gradient-primary blur-sm opacity-60" />
-              <img
-                src={currentCharacter.thumbnail}
-                alt={currentCharacter.name}
-                className="relative w-16 h-16 rounded-full border-2 border-primary object-cover"
-              />
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-dark via-surface-dark/80 to-transparent p-6 pb-24 md:pb-8">
+          <div className="flex items-center gap-4">
+            <div className="relative flex flex-col items-center">
+              {/* Chat Icon Button */}
+              <Link
+                href={`/chat/${currentCharacter.id}`}
+                className="mb-2 w-10 h-10 gradient-primary rounded-full flex items-center justify-center hover:opacity-90 transition-all glow-primary-sm"
+                aria-label={`Chat with ${currentCharacter.name}`}
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </Link>
+              {/* Clickable Avatar */}
+              <Link
+                href={`/character/${currentCharacter.id}`}
+                className="relative block"
+                aria-label={`View ${currentCharacter.name}'s profile`}
+              >
+                <div className="absolute inset-0 rounded-full gradient-primary blur-sm opacity-60" />
+                <img
+                  src={currentCharacter.thumbnail}
+                  alt={currentCharacter.name}
+                  className="relative w-16 h-16 rounded-full border-2 border-primary object-cover hover:border-white transition-colors"
+                />
+              </Link>
             </div>
             <div className="flex-1">
               <h2 className="text-white text-2xl font-bold">
@@ -113,22 +139,6 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
                 {currentCharacter.description}
               </p>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Link
-              href={`/character/${currentCharacter.id}`}
-              className="flex-1 bg-surface-light border border-border text-white py-3 px-6 rounded-full font-semibold text-center hover:bg-surface hover:border-primary/50 transition-all"
-            >
-              View Profile
-            </Link>
-            <Link
-              href={`/chat/${currentCharacter.id}`}
-              className="flex-1 gradient-primary text-white py-3 px-6 rounded-full font-semibold text-center hover:opacity-90 transition-all glow-primary-sm"
-            >
-              Chat Now
-            </Link>
           </div>
         </div>
 
@@ -165,12 +175,14 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
         </div>
 
         {/* Swipe Instructions (shows briefly) */}
-        <div className="absolute top-20 left-0 right-0 text-center">
-          <div className="inline-block glass border border-border text-white px-5 py-3 rounded-2xl text-sm">
-            <p className="text-gray-300">↔️ Swipe horizontally for more images</p>
-            <p className="text-gray-300">↕️ Swipe vertically to change characters</p>
+        {showInstructions && (
+          <div className="absolute top-20 left-0 right-0 text-center transition-opacity duration-500">
+            <div className="inline-block glass border border-border text-white px-5 py-3 rounded-2xl text-sm">
+              <p className="text-gray-300">↔️ Swipe horizontally for more images</p>
+              <p className="text-gray-300">↕️ Swipe vertically to change characters</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

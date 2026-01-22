@@ -52,6 +52,7 @@ function transformSchedule(row: any): ContentGenerationSchedule {
     autoPost: row.auto_post,
     schedulingTemplateId: row.scheduling_template_id,
     targetPlatforms: row.target_platforms || [],
+    autoConnectToScheduleTemplate: row.auto_connect_to_schedule_template || false,
     lastExecutedAt: row.last_executed_at ? new Date(row.last_executed_at) : undefined,
     nextScheduledAt: row.next_scheduled_at ? new Date(row.next_scheduled_at) : undefined,
     totalPostsGenerated: row.total_posts_generated,
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
       autoPost = false,
       schedulingTemplateId,
       targetPlatforms = [],
+      autoConnectToScheduleTemplate = false,
     } = body;
 
     // Validate required fields
@@ -226,6 +228,7 @@ export async function POST(request: NextRequest) {
         auto_post: autoPost,
         scheduling_template_id: schedulingTemplateId,
         target_platforms: targetPlatforms,
+        auto_connect_to_schedule_template: autoConnectToScheduleTemplate,
         next_scheduled_at: nextScheduledAt.toISOString(),
         is_active: true,
       })

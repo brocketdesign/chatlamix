@@ -1,18 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Character } from "@/lib/types";
+import { ImageLightbox } from "@/components/ImageLightbox";
+import { FollowButton, FollowStats } from "@/components/monetization";
+import { useAuth } from "@/lib/supabase/auth-context";
+import { MobileBottomNav } from "@/components/Navigation";
 
 export default function CharacterProfile() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const characterId = params.id as string;
   
   const [character, setCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [subscriberCount, setSubscriberCount] = useState(0);
 
+  // Fetch character data
   useEffect(() => {
     const loadCharacter = async () => {
       try {
@@ -29,6 +40,67 @@ export default function CharacterProfile() {
     };
     loadCharacter();
   }, [characterId]);
+
+  // Fetch follow status and stats
+  useEffect(() => {
+    const fetchFollowData = async () => {
+      try {
+        // Fetch follow status for logged-in user
+        if (user) {
+          const followResponse = await fetch(`/api/follows?characterId=${characterId}`);
+          if (followResponse.ok) {
+            const followData = await followResponse.json();
+            setIsFollowing(followData.isFollowing);
+          }
+        }
+        
+        // Fetch follower/subscriber counts
+        const statsResponse = await fetch(`/api/follows?characterId=${characterId}&stats=true`);
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setFollowerCount(statsData.followerCount || 0);
+          setSubscriberCount(statsData.subscriberCount || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching follow data:", error);
+      }
+    };
+    
+    if (characterId) {
+      fetchFollowData();
+    }
+  }, [characterId, user]);
+
+  // Handle image click to open lightbox
+  const handleImageClick = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  // Follow/unfollow handlers
+  const handleFollow = useCallback(async (charId: string) => {
+    const response = await fetch("/api/follows", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterId: charId }),
+    });
+    if (response.ok) {
+      setIsFollowing(true);
+      setFollowerCount((prev) => prev + 1);
+    }
+  }, []);
+
+  const handleUnfollow = useCallback(async (charId: string) => {
+    const response = await fetch("/api/follows", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ characterId: charId }),
+    });
+    if (response.ok) {
+      setIsFollowing(false);
+      setFollowerCount((prev) => Math.max(0, prev - 1));
+    }
+  }, []);
 
 
 
@@ -72,8 +144,8 @@ export default function CharacterProfile() {
       {/* Profile Content */}
       <div className="max-w-4xl mx-auto p-6">
         {/* Character Header */}
-        <div className="flex items-center gap-6 mb-8">
-          <div className="relative">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
+          <div className="relative flex-shrink-0">
             <div className="absolute inset-0 rounded-full gradient-primary blur-md opacity-60" />
             <img
               src={character.thumbnail}
@@ -81,12 +153,30 @@ export default function CharacterProfile() {
               className="relative w-32 h-32 rounded-full border-4 border-primary object-cover"
             />
           </div>
-          <div>
-            <h2 className="text-3xl font-bold mb-2">{character.name}</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-4 mb-2 flex-wrap">
+              <h2 className="text-3xl font-bold">{character.name}</h2>
+              {user && (
+                <FollowButton
+                  characterId={character.id}
+                  isFollowing={isFollowing}
+                  onFollow={handleFollow}
+                  onUnfollow={handleUnfollow}
+                  size="md"
+                />
+              )}
+            </div>
             <p className="text-gray-400 mb-3">{character.description}</p>
-            <span className="inline-block gradient-primary px-4 py-1.5 rounded-full text-sm font-medium glow-primary-sm">
-              {character.category}
-            </span>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="inline-block gradient-primary px-4 py-1.5 rounded-full text-sm font-medium glow-primary-sm">
+                {character.category}
+              </span>
+              <FollowStats
+                followerCount={followerCount}
+                subscriberCount={subscriberCount}
+                className="text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -113,7 +203,8 @@ export default function CharacterProfile() {
             {character.images.map((image, index) => (
               <div
                 key={index}
-                className="aspect-[3/4] rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all group"
+                onClick={() => handleImageClick(index)}
+                className="aspect-[3/4] rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all group cursor-pointer"
               >
                 <img
                   src={image}
@@ -125,6 +216,19 @@ export default function CharacterProfile() {
           </div>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        images={character.images}
+        characterName={character.name}
+        characterId={character.id}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
+      
+      {/* Mobile Bottom Navigation - Hidden when lightbox is open */}
+      {!lightboxOpen && <MobileBottomNav />}
     </div>
   );
 }

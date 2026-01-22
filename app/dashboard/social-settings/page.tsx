@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Link from "next/link";
+import { MobileBottomNav } from "@/components/Navigation";
 import {
   LateProfile,
   LateAccount,
@@ -283,7 +284,7 @@ export default function SocialMediaSettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400">
             {error}
@@ -614,6 +615,8 @@ export default function SocialMediaSettingsPage() {
           </div>
         )}
       </main>
+      
+      <MobileBottomNav />
     </div>
   );
 }

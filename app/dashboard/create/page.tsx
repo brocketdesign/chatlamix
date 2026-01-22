@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Link from "next/link";
+import { MobileBottomNav } from "@/components/Navigation";
 import {
   CharacterPersonality,
   PhysicalAttributes,
@@ -191,6 +192,36 @@ export default function CreateCharacterPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [characterLimits, setCharacterLimits] = useState<{
+    limit: number;
+    current: number;
+    remaining: number;
+    isPremium: boolean;
+    canCreate: boolean;
+  } | null>(null);
+  const [limitsLoading, setLimitsLoading] = useState(true);
+
+  // Check character limits on mount
+  useEffect(() => {
+    const checkLimits = async () => {
+      try {
+        const response = await fetch("/api/characters?type=limits");
+        if (response.ok) {
+          const data = await response.json();
+          setCharacterLimits(data);
+        }
+      } catch (err) {
+        console.error("Failed to check character limits:", err);
+      } finally {
+        setLimitsLoading(false);
+      }
+    };
+    if (user) {
+      checkLimits();
+    } else {
+      setLimitsLoading(false);
+    }
+  }, [user]);
 
   // Form state
   const [name, setName] = useState("");
@@ -232,19 +263,81 @@ export default function CreateCharacterPage() {
         body: JSON.stringify(characterData),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
+        // Handle character limit error specifically
+        if (response.status === 403 && data.error === "Character limit reached") {
+          setError(data.message || "Character limit reached");
+          setCharacterLimits({
+            limit: data.limit,
+            current: data.current,
+            remaining: 0,
+            isPremium: data.isPremium,
+            canCreate: false,
+          });
+          return;
+        }
         throw new Error(data.error || "Failed to create character");
       }
 
-      const character = await response.json();
-      router.push(`/dashboard/character/${character.id}`);
+      router.push(`/dashboard/character/${data.id}`);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Show limit reached screen
+  if (!limitsLoading && characterLimits && !characterLimits.canCreate) {
+    return (
+      <div className="min-h-screen bg-surface-dark text-white">
+        <header className="sticky top-0 z-10 glass border-b border-border">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+            <Link
+              href="/dashboard"
+              className="text-2xl hover:text-primary-light transition-colors"
+            >
+              ←
+            </Link>
+            <h1 className="text-xl font-bold gradient-text">Create Character</h1>
+          </div>
+        </header>
+        
+        <main className="max-w-2xl mx-auto px-4 py-12">
+          <div className="glass rounded-2xl p-8 text-center">
+            <div className="text-6xl mb-4">🚫</div>
+            <h2 className="text-2xl font-bold mb-4">Character Limit Reached</h2>
+            <p className="text-text-secondary mb-6">
+              {characterLimits.isPremium 
+                ? `You've reached the maximum of ${characterLimits.limit} characters for Premium users.`
+                : `Free users can only create ${characterLimits.limit} character. Upgrade to Premium to create up to 10 characters!`
+              }
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/dashboard"
+                className="px-6 py-3 rounded-full bg-surface-light border border-border hover:border-primary transition-all"
+              >
+                Back to Dashboard
+              </Link>
+              {!characterLimits.isPremium && (
+                <Link
+                  href="/dashboard/monetization/upgrade"
+                  className="px-6 py-3 rounded-full gradient-primary hover:opacity-90 transition-all font-semibold"
+                >
+                  ✨ Upgrade to Premium
+                </Link>
+              )}
+            </div>
+          </div>
+        </main>
+        
+        <MobileBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface-dark text-white">
@@ -1049,6 +1142,9 @@ export default function CreateCharacterPage() {
           </div>
         )}
       </main>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

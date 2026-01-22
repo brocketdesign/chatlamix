@@ -325,11 +325,319 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Continue with prompt building and image generation in next commit
+    // Build the prompt
+    const physicalAttributes = character.physical_attributes as PhysicalAttributes;
+    let imagePrompt: string;
 
-    return NextResponse.json({ success: true, message: "coins-deducted" });
+    if (customPrompt) {
+      imagePrompt = customPrompt;
+      log("POST - Using custom prompt");
+    } else if (physicalAttributes) {
+      // Use the chat-specific prompt builder (user message is the focus)
+      imagePrompt = buildChatImagePrompt(physicalAttributes, messageText);
+      log("POST - Built prompt from physical attributes");
+    } else {
+      // Fallback: use character name and user's message
+      imagePrompt = `${messageText}. Featuring ${character.name}. High quality, detailed, sharp focus.`;
+      log("POST - Using fallback prompt");
+    }
+
+    log("POST - Final prompt", { 
+      promptLength: imagePrompt.length, 
+      promptPreview: imagePrompt.substring(0, 200) + "..." 
+    });
+
+    // Generate image using Segmind
+    log("POST - Calling Segmind image generation API");
+    const imageGenStartTime = Date.now();
+
+    const segmindResponse = await fetch(SEGMIND_IMAGE_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": SEGMIND_API_KEY,
+      },
+      body: JSON.stringify({
+        prompt: imagePrompt,
+        negative_prompt: "ugly, deformed, noisy, blurry, low quality, distorted, disfigured, bad anatomy",
+        steps: 8,
+        guidance_scale: 1,
+        seed: -1,
+        width: 1024,
+        height: 1024,
+        img_format: "webp",
+        quality: 90,
+      }),
+    });
+
+    log("POST - Segmind API responded", { 
+      status: segmindResponse.status, 
+      timeMs: Date.now() - imageGenStartTime 
+    });
+
+    if (!segmindResponse.ok) {
+      const errorText = await segmindResponse.text();
+      log("POST - Segmind error", { status: segmindResponse.status, error: errorText });
+      return NextResponse.json(
+        { error: "Failed to generate image" },
+        { status: 500 }
+      );
+    }
+
+    // Get image as base64
+    const imageBuffer = await segmindResponse.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString("base64");
+    let imageUrl = `data:image/webp;base64,${base64Image}`;
+
+    log("POST - Image generated successfully", { imageSizeBytes: imageBuffer.byteLength });
+
+    // ========== FACE SWAP SECTION ==========
+    // Check if character has a main face image for face swapping
+    const mainFaceImage = character.main_face_image;
+    const shouldFaceSwap = mainFaceImage && mainFaceImage.length > 0;
+    let faceSwapApplied = false;
+
+    log("POST - Face swap check", {
+      hasMainFaceImage: !!mainFaceImage,
+      mainFaceImageLength: mainFaceImage?.length || 0,
+      shouldFaceSwap,
+    });
+
+    if (shouldFaceSwap) {
+      try {
+        log("POST - Starting face swap with character's main face");
+        
+        // Forward cookies from the original request to maintain authentication
+        const cookieHeader = request.headers.get("cookie") || "";
+        
+        const faceSwapStartTime = Date.now();
+        log("POST - Calling face swap API", { 
+          sourceImageLength: mainFaceImage.length,
+          targetImageLength: imageUrl.length,
+        });
+
+        const faceSwapResponse = await fetch(
+          `${request.nextUrl.origin}/api/face-swap`,
+          {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "Cookie": cookieHeader,
+            },
+            body: JSON.stringify({
+              sourceImage: mainFaceImage,  // Character's base face
+              targetImage: imageUrl,        // Generated image to swap face into
+            }),
+          }
+        );
+
+        log("POST - Face swap API responded", { 
+          status: faceSwapResponse.status, 
+          timeMs: Date.now() - faceSwapStartTime 
+        });
+
+        if (faceSwapResponse.ok) {
+          const faceSwapResult = await faceSwapResponse.json();
+          log("POST - Face swap result", { 
+            success: faceSwapResult.success, 
+            hasImageUrl: !!faceSwapResult.imageUrl,
+            resultImageLength: faceSwapResult.imageUrl?.length || 0,
+          });
+          
+          if (faceSwapResult.success && faceSwapResult.imageUrl) {
+            imageUrl = faceSwapResult.imageUrl;
+            faceSwapApplied = true;
+            log("POST - Face swap applied successfully");
+          } else {
+            log("POST - Face swap response missing imageUrl", { result: faceSwapResult });
+          }
+        } else {
+          const errorData = await faceSwapResponse.json().catch(() => ({}));
+          log("POST - Face swap API error", { 
+            status: faceSwapResponse.status, 
+            error: errorData 
+          });
+        }
+      } catch (faceSwapError) {
+        log("POST - Face swap failed, using original image", { 
+          error: String(faceSwapError) 
+        });
+      }
+    } else {
+      log("POST - Skipping face swap - no main face image available for character");
+    }
+
+    const finalImageUrl = imageUrl;
+    log("POST - Final image ready", { 
+      faceSwapApplied, 
+      finalImageUrlLength: finalImageUrl.length 
+    });
+
+    // Determine image format from the data URL
+    const mimeMatch = finalImageUrl.match(/^data:(image\/[^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : "image/webp";
+    const extension = mimeType.split("/")[1] || "webp";
+    
+    // Upload to Supabase Storage
+    log("POST - Uploading to Supabase Storage", { mimeType, extension });
+    const fileName = `chat_${characterId}_${Date.now()}.${extension}`;
+    
+    // Convert data URL back to buffer for upload
+    const uploadBuffer = Buffer.from(finalImageUrl.split(",")[1], "base64");
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("character-images")
+      .upload(fileName, uploadBuffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    let storedImageUrl = finalImageUrl;
+    if (!uploadError && uploadData) {
+      const { data: { publicUrl } } = supabase.storage
+        .from("character-images")
+        .getPublicUrl(fileName);
+      storedImageUrl = publicUrl;
+      log("POST - Uploaded to storage", { publicUrl });
+    } else if (uploadError) {
+      log("POST - Storage upload failed (using base64)", { error: uploadError.message });
+    }
+
+    // Get or create session
+    log("POST - Getting or creating chat session");
+    let session;
+    const { data: existingSession } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("character_id", characterId)
+      .single();
+
+    if (existingSession) {
+      session = existingSession;
+      log("POST - Using existing session", { sessionId: session.id });
+    } else {
+      const { data: newSession } = await supabase
+        .from("chat_sessions")
+        .insert({
+          user_id: user.id,
+          character_id: characterId,
+          relationship_progress: 0,
+        })
+        .select()
+        .single();
+      session = newSession;
+      log("POST - Created new session", { sessionId: session?.id });
+    }
+
+    // Save chat image to database
+    log("POST - Saving to database");
+    let savedImage = null;
+    
+    // Validate messageId is a proper UUID before using it
+    const validMessageId = messageId && isValidUUID(messageId) ? messageId : null;
+    if (messageId && !validMessageId) {
+      log("POST - Invalid messageId format (not a UUID), ignoring", { messageId });
+    }
+    
+    if (session) {
+      try {
+        const { data: chatImage, error: chatImageError } = await supabase
+          .from("chat_images")
+          .insert({
+            session_id: session.id,
+            message_id: validMessageId,
+            character_id: characterId,
+            user_id: user.id,
+            image_url: storedImageUrl,
+            prompt: imagePrompt,
+            coin_cost: CHAT_IMAGE_COST,
+            settings: { 
+              width: 1024, 
+              height: 1024,
+              faceSwapApplied,
+            },
+          })
+          .select()
+          .single();
+        
+        if (chatImageError) {
+          log("POST - Error saving chat_image", { error: chatImageError.message });
+        } else {
+          savedImage = chatImage;
+          log("POST - Saved to chat_images", { imageId: chatImage?.id });
+        }
+
+        // Also add to character_images gallery
+        const { error: galleryError } = await supabase.from("character_images").insert({
+          character_id: characterId,
+          image_url: storedImageUrl,
+          prompt: imagePrompt,
+          is_main_face: false,
+          gallery_status: "unposted",
+          settings: { 
+            width: 1024, 
+            height: 1024,
+            source: "chat",
+            original_message: messageText,
+            faceSwapApplied,
+          },
+        });
+
+        if (galleryError) {
+          log("POST - Error saving to gallery", { error: galleryError.message });
+        } else {
+          log("POST - Saved to character_images gallery");
+        }
+
+        // Create an image message in chat (from character)
+        const { data: imageMessage, error: messageError } = await supabase
+          .from("chat_messages")
+          .insert({
+            session_id: session.id,
+            character_id: characterId,
+            user_id: user.id,
+            sender: "character",
+            text: "Here's the image I generated for you! 📸",
+            message_type: "image",
+            image_url: storedImageUrl,
+            image_id: chatImage?.id,
+          })
+          .select()
+          .single();
+
+        if (messageError) {
+          log("POST - Error creating image message", { error: messageError.message });
+        } else {
+          savedImage = { ...savedImage, messageId: imageMessage?.id };
+          log("POST - Created image message", { messageId: imageMessage?.id });
+        }
+      } catch (saveError) {
+        log("POST - Error saving chat image (non-critical)", { error: String(saveError) });
+      }
+    }
+
+    const totalTime = Date.now() - startTime;
+    log("POST - Request completed", { 
+      totalTimeMs: totalTime,
+      faceSwapApplied,
+      imageId: savedImage?.id,
+    });
+
+    return NextResponse.json({
+      success: true,
+      imageUrl: storedImageUrl,
+      imageId: savedImage?.id,
+      prompt: imagePrompt,
+      coinCost: CHAT_IMAGE_COST,
+      newBalance,
+      faceSwapApplied,
+      message: faceSwapApplied 
+        ? "Image generated with face swap!" 
+        : "Image generated successfully!",
+    });
   } catch (error) {
-    log("POST - Unexpected error (coin-flow)", { error: String(error) });
+    log("POST - Unexpected error", { error: String(error) });
     return NextResponse.json(
       { error: "Failed to generate image" },
       { status: 500 }

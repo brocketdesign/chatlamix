@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.content_generation_schedules (
   auto_post BOOLEAN DEFAULT false, -- Whether to auto-post generated content
   scheduling_template_id UUID REFERENCES public.scheduling_templates(id) ON DELETE SET NULL,
   target_platforms TEXT[] DEFAULT '{}',
+  auto_connect_to_schedule_template BOOLEAN DEFAULT false, -- Auto-queue content to available template slots
   
   -- Execution tracking
   last_executed_at TIMESTAMPTZ,
