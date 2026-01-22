@@ -6,6 +6,8 @@ import { UserButton } from "@/components/auth/UserButton";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 interface StripeAccountStatus {
   hasAccount: boolean;
   accountId?: string;
