@@ -3,6 +3,7 @@
 import { useState, useRef, TouchEvent, MouseEvent, useEffect, useCallback } from "react";
 import { Character } from "@/lib/types";
 import Link from "next/link";
+import Image from "next/image";
 
 interface ShowcaseGalleryProps {
   characters: Character[];
@@ -188,10 +189,11 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
     >
       {/* Main Image Container - TikTok style: full cover on mobile, contained on desktop */}
       <div className="relative w-full h-full lg:w-auto lg:h-full lg:aspect-[9/16] lg:max-w-[500px] select-none">
-        <img
+        <Image
           src={currentCharacter.images[currentImageIndex]}
           alt={`${currentCharacter.name} - Image ${currentImageIndex + 1}`}
-          className="w-full h-full object-cover object-top lg:object-contain lg:object-center transition-opacity duration-300 pointer-events-none"
+          fill
+          className="object-cover object-top lg:object-contain lg:object-center transition-opacity duration-300 pointer-events-none"
           draggable={false}
         />
 

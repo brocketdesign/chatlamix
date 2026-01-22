@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Link from "next/link";
+import Image from "next/image";
 import Navigation from "@/components/Navigation";
 import {
   Character,
@@ -152,7 +153,7 @@ export default function ContentAutomationPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLoading, user]);
+  }, [isLoading, user, selectedCharacter]);
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -469,10 +470,12 @@ export default function ContentAutomationPage() {
                 }`}
               >
                 {char.thumbnail && (
-                  <img
+                  <Image
                     src={char.thumbnail}
                     alt={char.name}
-                    className="w-8 h-8 rounded-full object-cover"
+                    width={32}
+                    height={32}
+                    className="rounded-full object-cover"
                   />
                 )}
                 <span>{char.name}</span>

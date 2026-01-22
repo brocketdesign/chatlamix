@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Link from "next/link";
+import Image from "next/image";
 import { Character, CharacterImage, GalleryStatus } from "@/lib/types";
 import ShareToSocialMedia from "@/components/ShareToSocialMedia";
 import { MobileBottomNav } from "@/components/Navigation";
@@ -558,10 +559,12 @@ export default function CharacterManagePage() {
             </Link>
             <div className="flex items-center gap-3">
               {character.thumbnail ? (
-                <img
+                <Image
                   src={character.thumbnail}
                   alt={character.name}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-primary"
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover border-2 border-primary"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full gradient-primary" />

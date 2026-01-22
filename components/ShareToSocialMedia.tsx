@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import {
   LateAccount,
   LateProfile,
@@ -409,10 +410,12 @@ export default function ShareToSocialMedia({
           <>
             {/* Image Preview */}
             <div className="flex gap-4 mb-6">
-              <img
+              <Image
                 src={image.imageUrl}
                 alt={characterName}
-                className="w-24 h-24 rounded-xl object-cover border border-border"
+                width={96}
+                height={96}
+                className="rounded-xl object-cover border border-border"
               />
               <div className="flex-1">
                 <h3 className="font-semibold">{characterName}</h3>

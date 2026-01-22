@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, TouchEvent, MouseEvent } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 interface Comment {
@@ -390,9 +391,11 @@ export function ImageLightbox({
           className={`flex items-center justify-center w-full h-full ${isTransitioning ? 'transition-transform duration-300 ease-out' : ''}`}
           style={{ transform: `translateX(${swipeOffset}px)` }}
         >
-          <img
+          <Image
             src={currentImage}
             alt={`${characterName} - Image ${currentIndex + 1}`}
+            width={800}
+            height={800}
             className="max-w-full max-h-full object-contain rounded-lg pointer-events-none select-none"
             draggable={false}
           />
@@ -561,9 +564,11 @@ export function ImageLightbox({
                 <div key={comment.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-surface-light flex items-center justify-center overflow-hidden flex-shrink-0">
                     {comment.profiles?.avatar_url ? (
-                      <img 
+                      <Image 
                         src={comment.profiles.avatar_url} 
                         alt="" 
+                        width={32}
+                        height={32}
                         className="w-full h-full object-cover" 
                       />
                     ) : (

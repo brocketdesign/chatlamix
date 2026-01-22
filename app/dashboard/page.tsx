@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Navigation from "@/components/Navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Character } from "@/lib/types";
 
 interface PremiumStatus {
@@ -405,10 +406,11 @@ export default function DashboardPage() {
               >
                 <div className="aspect-square relative bg-surface-light">
                   {character.thumbnail ? (
-                    <img
+                    <Image
                       src={character.thumbnail}
                       alt={character.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

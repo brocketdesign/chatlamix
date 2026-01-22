@@ -845,9 +845,11 @@ export default function ChatPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {chatImages.map((image) => (
                   <div key={image.id} className="relative group">
-                    <img
+                    <Image
                       src={image.image_url}
                       alt={image.prompt}
+                      width={300}
+                      height={300}
                       className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(image.image_url, "_blank")}
                     />

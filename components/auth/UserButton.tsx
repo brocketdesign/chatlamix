@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/auth-context";
 
@@ -43,10 +44,12 @@ export function UserButton({ afterSignOutUrl = "/" }: UserButtonProps) {
         className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-semibold hover:opacity-90 transition-opacity"
       >
         {user.user_metadata?.avatar_url ? (
-          <img
+          <Image
             src={user.user_metadata.avatar_url}
             alt="Avatar"
-            className="w-full h-full rounded-full object-cover"
+            width={40}
+            height={40}
+            className="rounded-full object-cover"
           />
         ) : (
           initials

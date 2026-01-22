@@ -110,7 +110,7 @@ export default function MonetizationDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [isLoading, user, selectedPeriod, selectedCharacter]);
+  }, [selectedPeriod, selectedCharacter]);
 
   useEffect(() => {
     if (!isLoading && user) {
