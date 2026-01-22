@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import { UserButton } from "@/components/auth/UserButton";
 import Link from "next/link";
@@ -24,7 +24,7 @@ interface StripeAccountStatus {
   defaultCurrency?: string;
 }
 
-export default function PayoutSettingsPage() {
+function PayoutSettingsContent() {
   const { user, isLoading } = useAuth();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -409,5 +409,17 @@ function Header() {
         <UserButton afterSignOutUrl="/" />
       </div>
     </header>
+  );
+}
+
+export default function PayoutSettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <PayoutSettingsContent />
+    </Suspense>
   );
 }

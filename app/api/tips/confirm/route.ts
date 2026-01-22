@@ -5,11 +5,13 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Service role client for admin operations
-const supabaseAdmin = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization for service role client to avoid build-time errors
+function getSupabaseAdmin() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const PLATFORM_FEE_PERCENTAGE = 0.15; // 15% platform fee
 
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
     const amount = paymentIntent.amount / 100; // Convert from cents
 
     // Create tip record
-    const { data: tip, error: tipError } = await supabaseAdmin
+    const { data: tip, error: tipError } = await getSupabaseAdmin()
       .from('tips')
       .insert({
         fan_id: isAnonymous ? null : user.id,
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
     const platformFee = amount * PLATFORM_FEE_PERCENTAGE;
     const netAmount = amount - platformFee;
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('creator_earnings')
       .insert({
         creator_id: character.user_id,
@@ -137,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     // Update daily stats
     const today = new Date().toISOString().split('T')[0];
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('character_daily_stats')
       .upsert({
         character_id: characterId,

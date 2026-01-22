@@ -5,11 +5,13 @@ import Stripe from "stripe";
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Use service role for webhook handling (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization for service role client to avoid build-time errors
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -134,7 +136,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const periodEnd = subscriptionData.items.data[0]?.current_period_end;
 
   // Update or create the subscription in Supabase
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("user_premium_subscriptions")
     .upsert(
       {
@@ -163,14 +165,14 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 
   // Allocate monthly coins
-  const { data: plan } = await supabaseAdmin
+  const { data: plan } = await getSupabaseAdmin()
     .from("premium_plans")
     .select("monthly_coins, display_name")
     .eq("id", planId)
     .single();
 
   if (plan && plan.monthly_coins > 0) {
-    await supabaseAdmin.rpc("add_coins", {
+    await getSupabaseAdmin().rpc("add_coins", {
       p_user_id: userId,
       p_amount: plan.monthly_coins,
       p_transaction_type: "premium_allocation",
@@ -186,7 +188,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 
   if (!userId) {
     // Try to find user by stripe customer ID
-    const { data: existingSub } = await supabaseAdmin
+    const { data: existingSub } = await getSupabaseAdmin()
       .from("user_premium_subscriptions")
       .select("user_id")
       .eq("stripe_subscription_id", subscription.id)
@@ -215,7 +217,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const periodStart = subscription.items.data[0]?.current_period_start;
   const periodEnd = subscription.items.data[0]?.current_period_end;
 
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("user_premium_subscriptions")
     .update({
       status,
@@ -239,7 +241,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("user_premium_subscriptions")
     .update({
       status: "cancelled",
@@ -266,7 +268,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // Get the subscription
-  const { data: existingSub } = await supabaseAdmin
+  const { data: existingSub } = await getSupabaseAdmin()
     .from("user_premium_subscriptions")
     .select("user_id, plan_id")
     .eq("stripe_subscription_id", subscriptionId)
@@ -277,14 +279,14 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 
   // Allocate monthly coins for renewal
-  const { data: plan } = await supabaseAdmin
+  const { data: plan } = await getSupabaseAdmin()
     .from("premium_plans")
     .select("monthly_coins, display_name")
     .eq("id", existingSub.plan_id)
     .single();
 
   if (plan && plan.monthly_coins > 0) {
-    await supabaseAdmin.rpc("add_coins", {
+    await getSupabaseAdmin().rpc("add_coins", {
       p_user_id: existingSub.user_id,
       p_amount: plan.monthly_coins,
       p_transaction_type: "premium_allocation",
@@ -305,7 +307,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   }
 
   // Update subscription status to past_due
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("user_premium_subscriptions")
     .update({
       status: "past_due",
@@ -326,7 +328,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
 async function handleAccountUpdated(account: Stripe.Account) {
   // Find the creator with this connected account
-  const { data: settings, error: findError } = await supabaseAdmin
+  const { data: settings, error: findError } = await getSupabaseAdmin()
     .from("creator_payout_settings")
     .select("creator_id")
     .eq("stripe_connect_account_id", account.id)
@@ -338,7 +340,7 @@ async function handleAccountUpdated(account: Stripe.Account) {
   }
 
   // Update the creator's payout settings with account status
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("creator_payout_settings")
     .update({
       stripe_connect_onboarding_complete: account.details_submitted,
@@ -356,7 +358,7 @@ async function handleAccountUpdated(account: Stripe.Account) {
   }
 
   // Log the event
-  await supabaseAdmin
+  await getSupabaseAdmin()
     .from("stripe_connect_events")
     .insert({
       creator_id: settings.creator_id,
@@ -382,7 +384,7 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
   }
 
   // Update the payout request status
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("payout_requests")
     .update({
       status: "processing",
@@ -407,7 +409,7 @@ async function handleTransferFailed(transfer: Stripe.Transfer) {
   }
 
   // Update the payout request status to failed
-  const { error } = await supabaseAdmin
+  const { error } = await getSupabaseAdmin()
     .from("payout_requests")
     .update({
       status: "failed",
@@ -435,7 +437,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     const amount = paymentIntent.amount / 100;
 
     // Check if tip already exists
-    const { data: existingTip } = await supabaseAdmin
+    const { data: existingTip } = await getSupabaseAdmin()
       .from("tips")
       .select("id")
       .eq("stripe_payment_intent_id", paymentIntent.id)
@@ -447,7 +449,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
 
     // Create tip record
-    const { data: tip, error: tipError } = await supabaseAdmin
+    const { data: tip, error: tipError } = await getSupabaseAdmin()
       .from("tips")
       .insert({
         fan_id: isAnonymous || tipperId === "anonymous" ? null : tipperId,
@@ -470,7 +472,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     const platformFee = amount * 0.15;
     const netAmount = amount - platformFee;
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from("creator_earnings")
       .insert({
         creator_id: creatorId,
