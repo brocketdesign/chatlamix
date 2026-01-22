@@ -559,13 +559,14 @@ export default function CharacterManagePage() {
             </Link>
             <div className="flex items-center gap-3">
               {character.thumbnail ? (
-                <Image
-                  src={character.thumbnail}
-                  alt={character.name}
-                  width={40}
-                  height={40}
-                  className="rounded-full object-cover border-2 border-primary"
-                />
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary relative">
+                  <Image
+                    src={character.thumbnail}
+                    alt={character.name}
+                    fill
+                    className="object-cover object-top"
+                  />
+                </div>
               ) : (
                 <div className="w-10 h-10 rounded-full gradient-primary" />
               )}
@@ -1364,15 +1365,16 @@ export default function CharacterManagePage() {
               <div className="flex flex-col sm:flex-row items-start gap-6">
                 {/* Current Profile Picture */}
                 <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
+                  <div className="relative w-32 h-32">
                     {character.thumbnail ? (
-                      <Image
-                        src={character.thumbnail}
-                        alt={`${character.name} profile`}
-                        width={128}
-                        height={128}
-                        className="rounded-full object-cover border-4 border-primary shadow-lg shadow-primary/20"
-                      />
+                      <div className="w-full h-full rounded-full overflow-hidden border-4 border-primary shadow-lg shadow-primary/20 relative">
+                        <Image
+                          src={character.thumbnail}
+                          alt={`${character.name} profile`}
+                          fill
+                          className="object-cover object-top"
+                        />
+                      </div>
                     ) : (
                       <div className="w-32 h-32 rounded-full gradient-primary flex items-center justify-center">
                         <svg className="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
