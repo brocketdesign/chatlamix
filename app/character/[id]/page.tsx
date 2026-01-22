@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Character } from "@/lib/types";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { FollowButton, FollowStats } from "@/components/monetization";
@@ -147,10 +148,12 @@ export default function CharacterProfile() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
           <div className="relative flex-shrink-0">
             <div className="absolute inset-0 rounded-full gradient-primary blur-md opacity-60" />
-            <img
+            <Image
               src={character.thumbnail}
               alt={character.name}
-              className="relative w-32 h-32 rounded-full border-4 border-primary object-cover"
+              width={128}
+              height={128}
+              className="relative rounded-full border-4 border-primary object-cover"
             />
           </div>
           <div className="flex-1">
@@ -215,10 +218,11 @@ export default function CharacterProfile() {
                 onClick={() => handleImageClick(index)}
                 className="aspect-[3/4] rounded-xl overflow-hidden bg-surface border border-border hover:border-primary/50 transition-all group cursor-pointer"
               >
-                <img
+                <Image
                   src={image}
                   alt={`${character.name} - Image ${index + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
             ))}

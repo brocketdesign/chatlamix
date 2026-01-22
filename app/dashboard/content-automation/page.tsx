@@ -112,13 +112,7 @@ export default function ContentAutomationPage() {
   const [generateContentType, setGenerateContentType] = useState<ContentType>("lifestyle");
   const [generatedImage, setGeneratedImage] = useState<any>(null);
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      loadData();
-    }
-  }, [isLoading, user]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [charsRes, schedulesRes, templatesRes, contentRes, accountsRes] = await Promise.all([
@@ -158,7 +152,13 @@ export default function ContentAutomationPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [isLoading, user]);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      loadData();
+    }
+  }, [isLoading, user, loadData]);
 
   async function handleCreateSchedule() {
     if (!selectedCharacter || !newSchedule.name) {

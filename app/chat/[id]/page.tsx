@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Character } from "@/lib/types";
 import { useAuth } from "@/lib/supabase/auth-context";
 
@@ -533,10 +534,12 @@ export default function ChatPage() {
           <div className="relative">
             <div className="absolute inset-0 rounded-full gradient-primary blur-sm opacity-50 scale-110" />
             {character.thumbnail ? (
-              <img
+              <Image
                 src={character.thumbnail}
                 alt={character.name}
-                className="relative w-10 h-10 rounded-full object-cover border-2 border-primary"
+                width={40}
+                height={40}
+                className="relative rounded-full object-cover border-2 border-primary"
               />
             ) : (
               <div className="relative w-10 h-10 rounded-full gradient-primary border-2 border-primary" />
@@ -633,9 +636,11 @@ export default function ChatPage() {
                 {/* Image display */}
                 {message.message_type === "image" && message.image_url && (
                   <div className="mb-2">
-                    <img
+                    <Image
                       src={message.image_url}
                       alt="Generated"
+                      width={500}
+                      height={500}
                       className="rounded-lg max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(message.image_url, "_blank")}
                     />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LateAccount,
   LateProfile,
@@ -87,19 +87,7 @@ export default function ShareToSocialMedia({
   const [nextSlot, setNextSlot] = useState<string | null>(null);
 
   // Load initial data
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Load accounts when profile changes
-  useEffect(() => {
-    if (selectedProfile) {
-      loadAccounts();
-      loadNextSlot();
-    }
-  }, [selectedProfile, selectedTemplate]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -135,9 +123,9 @@ export default function ShareToSocialMedia({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     try {
       const res = await fetch(`/api/social-media?type=accounts&profileId=${selectedProfile}`);
       if (res.ok) {
@@ -147,9 +135,9 @@ export default function ShareToSocialMedia({
     } catch (err) {
       console.error("Error loading accounts:", err);
     }
-  }
+  }, [selectedProfile]);
 
-  async function loadNextSlot() {
+  const loadNextSlot = useCallback(async () => {
     if (!selectedProfile || !useQueue) {
       setNextSlot(null);
       return;
@@ -171,7 +159,19 @@ export default function ShareToSocialMedia({
     } catch (err) {
       console.error("Error loading next slot:", err);
     }
-  }
+  }, [selectedProfile, selectedTemplate, templates, useQueue]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Load accounts when profile changes
+  useEffect(() => {
+    if (selectedProfile) {
+      loadAccounts();
+      loadNextSlot();
+    }
+  }, [selectedProfile, selectedTemplate, loadAccounts, loadNextSlot]);
 
   async function generateContent() {
     setGeneratingContent(true);

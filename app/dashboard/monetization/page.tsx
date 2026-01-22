@@ -84,13 +84,7 @@ export default function MonetizationDashboardPage() {
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
   const [coinBalance, setCoinBalance] = useState<number>(0);
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      loadData();
-    }
-  }, [isLoading, user, selectedPeriod, selectedCharacter]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [premiumRes, analyticsRes, coinsRes] = await Promise.all([
@@ -116,7 +110,13 @@ export default function MonetizationDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [isLoading, user, selectedPeriod, selectedCharacter]);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      loadData();
+    }
+  }, [isLoading, user, selectedPeriod, selectedCharacter, loadData]);
 
   if (isLoading || loading) {
     return (

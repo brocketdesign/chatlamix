@@ -65,13 +65,7 @@ export default function SocialMediaSettingsPage() {
   });
   const [showNewTemplate, setShowNewTemplate] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      loadData();
-    }
-  }, [isLoading, user]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Try to load profiles (will fail if no API key)
@@ -96,15 +90,9 @@ export default function SocialMediaSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [isLoading, user]);
 
-  useEffect(() => {
-    if (selectedProfile) {
-      loadAccounts();
-    }
-  }, [selectedProfile]);
-
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     try {
       const res = await fetch(`/api/social-media?type=accounts&profileId=${selectedProfile}`);
       if (res.ok) {
@@ -114,7 +102,20 @@ export default function SocialMediaSettingsPage() {
     } catch (err) {
       console.error("Error loading accounts:", err);
     }
-  }
+  }, [selectedProfile]);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      loadData();
+    }
+  }, [isLoading, user, loadData]);
+
+  useEffect(() => {
+    if (selectedProfile) {
+      loadAccounts();
+    }
+  }, [selectedProfile, loadAccounts]);
+
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) {

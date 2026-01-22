@@ -6,6 +6,8 @@ import Navigation, { MobileBottomNav } from "@/components/Navigation";
 import Link from "next/link";
 import { ImageLightbox } from "@/components/ImageLightbox";
 
+export const dynamic = 'force-dynamic';
+
 interface LikedImage {
   id: string;
   imageIdentifier: string;
