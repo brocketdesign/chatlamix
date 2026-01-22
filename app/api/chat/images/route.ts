@@ -99,3 +99,63 @@ function buildChatImagePrompt(
   // User's message is the PRIMARY focus, character description is secondary
   return `${userMessage}. The subject is a ${characterDescription}, ${fashionStyle} style. High quality, detailed, sharp focus, beautiful lighting.`;
 }
+
+// GET - Get chat images for a character/session
+export async function GET(request: NextRequest) {
+  log("GET request started");
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      log("GET - Authentication required, no user");
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const characterId = searchParams.get("characterId");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
+
+    log("GET - Params", { characterId, limit, offset, userId: user.id });
+
+    if (!characterId) {
+      log("GET - Missing characterId");
+      return NextResponse.json(
+        { error: "Character ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: images, error, count } = await supabase
+      .from("chat_images")
+      .select("*", { count: "exact" })
+      .eq("character_id", characterId)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      log("GET - Database error", { error: error.message });
+      return NextResponse.json(
+        { error: "Failed to fetch chat images" },
+        { status: 500 }
+      );
+    }
+
+    log("GET - Success", { imageCount: images?.length || 0, totalCount: count });
+    return NextResponse.json({
+      images: images || [],
+      totalImages: count || 0,
+    });
+  } catch (error) {
+    log("GET - Unexpected error", { error: String(error) });
+    return NextResponse.json(
+      { error: "Failed to fetch chat images" },
+      { status: 500 }
+    );
+  }
+}
