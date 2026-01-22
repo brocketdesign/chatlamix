@@ -5,11 +5,13 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Service role client for admin operations
-const supabaseAdmin = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization for service role client to avoid build-time errors
+function getSupabaseAdmin() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const PLATFORM_FEE_PERCENTAGE = 0.15; // 15% platform fee
 const MINIMUM_PAYOUT_AMOUNT = 20.00; // $20 minimum
@@ -185,7 +187,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Update payout request with Stripe transfer ID
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('payout_requests')
         .update({
           stripe_transfer_id: transfer.id,
@@ -196,7 +198,7 @@ export async function POST(request: NextRequest) {
         .eq('id', payoutRequestId);
 
       // Mark earnings as paid out
-      await supabaseAdmin.rpc('mark_earnings_paid_out', {
+      await getSupabaseAdmin().rpc('mark_earnings_paid_out', {
         p_creator_id: user.id,
         p_amount: amount,
         p_payout_request_id: payoutRequestId,
@@ -215,7 +217,7 @@ export async function POST(request: NextRequest) {
       console.error("Stripe transfer error:", stripeError);
 
       // Mark payout request as failed
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('payout_requests')
         .update({
           status: 'failed',

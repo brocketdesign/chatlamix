@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, TouchEvent, useEffect } from "react";
+import { useState, useRef, TouchEvent, MouseEvent, useEffect, useCallback } from "react";
 import { Character } from "@/lib/types";
 import Link from "next/link";
 
@@ -14,7 +14,11 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTime = useRef<number>(0);
 
   const currentCharacter = characters[currentCharacterIndex];
   const minSwipeDistance = 50;
@@ -79,6 +83,89 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
     }
   };
 
+  // Mouse drag handlers for desktop
+  const onMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Only handle left click
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setDragEnd(null);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const onMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    setDragEnd({ x: e.clientX, y: e.clientY });
+  };
+
+  const onMouseUp = () => {
+    if (!isDragging || !dragStart) {
+      setIsDragging(false);
+      return;
+    }
+
+    const endPoint = dragEnd || dragStart;
+    const distanceX = dragStart.x - endPoint.x;
+    const distanceY = dragStart.y - endPoint.y;
+
+    // Only handle horizontal drag for images (left/right)
+    if (Math.abs(distanceX) > minSwipeDistance && Math.abs(distanceX) > Math.abs(distanceY)) {
+      if (distanceX > 0) {
+        // Drag left - next image
+        setCurrentImageIndex((prev) =>
+          prev < currentCharacter.images.length - 1 ? prev + 1 : prev
+        );
+      } else {
+        // Drag right - previous image
+        setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      }
+    }
+
+    setIsDragging(false);
+    setDragStart(null);
+    setDragEnd(null);
+  };
+
+  const onMouseLeave = () => {
+    if (isDragging) {
+      onMouseUp();
+    }
+  };
+
+  // Handle scroll wheel for vertical character navigation
+  const onWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    
+    // Debounce scroll - prevent rapid navigation
+    const now = Date.now();
+    if (now - lastScrollTime.current < 300) return;
+    
+    // Only trigger if scroll is significant
+    if (Math.abs(e.deltaY) > 30) {
+      lastScrollTime.current = now;
+      if (e.deltaY > 0) {
+        // Scroll down - next character
+        setCurrentCharacterIndex((prev) =>
+          prev < characters.length - 1 ? prev + 1 : prev
+        );
+      } else {
+        // Scroll up - previous character
+        setCurrentCharacterIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      }
+    }
+  }, [characters.length]);
+
+  // Add wheel event listener with passive: false to prevent default
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+    };
+  }, [onWheel]);
+
   const goToImage = (index: number) => {
     setCurrentImageIndex(index);
   };
@@ -90,17 +177,22 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 w-full h-full overflow-hidden bg-surface-dark touch-none flex items-center justify-center"
+      className={`fixed inset-0 w-full h-full overflow-hidden bg-surface-dark touch-none flex items-center justify-center ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
     >
       {/* Main Image Container - TikTok style: full cover on mobile, contained on desktop */}
-      <div className="relative w-full h-full lg:w-auto lg:h-full lg:aspect-[9/16] lg:max-w-[500px]">
+      <div className="relative w-full h-full lg:w-auto lg:h-full lg:aspect-[9/16] lg:max-w-[500px] select-none">
         <img
           src={currentCharacter.images[currentImageIndex]}
           alt={`${currentCharacter.name} - Image ${currentImageIndex + 1}`}
-          className="w-full h-full object-cover object-top lg:object-contain lg:object-center transition-opacity duration-300"
+          className="w-full h-full object-cover object-top lg:object-contain lg:object-center transition-opacity duration-300 pointer-events-none"
+          draggable={false}
         />
 
         {/* Character Info Overlay */}
@@ -178,8 +270,16 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
         {showInstructions && (
           <div className="absolute top-20 left-0 right-0 text-center transition-opacity duration-500">
             <div className="inline-block glass border border-border text-white px-5 py-3 rounded-2xl text-sm">
-              <p className="text-gray-300">↔️ Swipe horizontally for more images</p>
-              <p className="text-gray-300">↕️ Swipe vertically to change characters</p>
+              {/* Mobile instructions */}
+              <div className="md:hidden">
+                <p className="text-gray-300">↔️ Swipe horizontally for more images</p>
+                <p className="text-gray-300">↕️ Swipe vertically to change characters</p>
+              </div>
+              {/* Desktop instructions */}
+              <div className="hidden md:block">
+                <p className="text-gray-300">🖱️ Drag left/right for more images</p>
+                <p className="text-gray-300">⚙️ Scroll to change characters</p>
+              </div>
             </div>
           </div>
         )}

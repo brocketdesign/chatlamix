@@ -182,12 +182,21 @@ export default function CharacterProfile() {
 
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8">
-          <Link
-            href={`/chat/${character.id}`}
-            className="flex-1 gradient-primary text-white py-3 px-6 rounded-full font-semibold text-center hover:opacity-90 transition-all glow-primary"
-          >
-            Start Chat
-          </Link>
+          {user ? (
+            <Link
+              href={`/chat/${character.id}`}
+              className="flex-1 gradient-primary text-white py-3 px-6 rounded-full font-semibold text-center hover:opacity-90 transition-all glow-primary"
+            >
+              Start Chat
+            </Link>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="flex-1 gradient-primary text-white py-3 px-6 rounded-full font-semibold text-center hover:opacity-90 transition-all glow-primary"
+            >
+              Sign in to Chat
+            </Link>
+          )}
           <Link
             href="/"
             className="flex-1 bg-surface-light border border-border text-white py-3 px-6 rounded-full font-semibold text-center hover:bg-surface hover:border-primary/50 transition-all"

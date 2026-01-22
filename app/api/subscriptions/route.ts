@@ -5,11 +5,13 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Service role client for admin operations
-const supabaseAdmin = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization for service role client to avoid build-time errors
+function getSupabaseAdmin() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 const PLATFORM_FEE_PERCENTAGE = 0.15; // 15% platform fee
 
@@ -159,7 +161,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
 
       // Save customer ID
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('profiles')
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id);
@@ -201,7 +203,7 @@ export async function POST(request: NextRequest) {
       stripePriceId = price.id;
 
       // Save the price ID to the tier
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('creator_tiers')
         .update({ stripe_price_id: stripePriceId, stripe_product_id: product.id })
         .eq('id', tier.id);

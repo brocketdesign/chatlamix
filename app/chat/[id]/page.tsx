@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Character } from "@/lib/types";
+import { useAuth } from "@/lib/supabase/auth-context";
 
 interface Message {
   id: string;
@@ -37,6 +38,7 @@ interface ChatImage {
 export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
   const characterId = params.id as string;
   const [character, setCharacter] = useState<Character | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

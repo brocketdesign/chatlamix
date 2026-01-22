@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, TouchEvent } from "react";
+import { useState, useEffect, useCallback, TouchEvent, MouseEvent } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import { createClient } from "@/lib/supabase/client";
 
@@ -48,6 +48,10 @@ export function ImageLightbox({
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Mouse drag state for desktop
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   const minSwipeDistance = 50;
   const currentImage = images[currentIndex];
@@ -256,6 +260,58 @@ export function ImageLightbox({
     setTouchEnd(null);
   };
 
+  // Mouse drag handlers for desktop
+  const onMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    if (showComments || e.button !== 0) return; // Only left click
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const onMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !dragStart || showComments) return;
+    e.preventDefault();
+    const diffX = e.clientX - dragStart.x;
+    
+    // Limit the offset at the edges with resistance
+    if ((currentIndex === 0 && diffX > 0) || (currentIndex === images.length - 1 && diffX < 0)) {
+      setSwipeOffset(diffX * 0.3);
+    } else {
+      setSwipeOffset(diffX);
+    }
+  };
+
+  const onMouseUp = () => {
+    if (!isDragging || !dragStart || showComments) {
+      setIsDragging(false);
+      setSwipeOffset(0);
+      return;
+    }
+
+    const distanceX = Math.abs(swipeOffset);
+
+    if (distanceX > minSwipeDistance) {
+      setIsTransitioning(true);
+      if (swipeOffset < 0) {
+        // Drag left - next image
+        goToNext();
+      } else {
+        // Drag right - previous image
+        goToPrevious();
+      }
+      setTimeout(() => setIsTransitioning(false), 300);
+    }
+
+    setSwipeOffset(0);
+    setIsDragging(false);
+    setDragStart(null);
+  };
+
+  const onMouseLeave = () => {
+    if (isDragging) {
+      onMouseUp();
+    }
+  };
+
   // Keyboard navigation - disabled when typing in comment input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -308,10 +364,14 @@ export function ImageLightbox({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center touch-none"
+      className={`fixed inset-0 z-50 bg-black/95 flex items-center justify-center touch-none select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
     >
       {/* Close button */}
       <button
@@ -366,7 +426,8 @@ export function ImageLightbox({
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
               </svg>
-              <span>Swipe to browse</span>
+              <span className="md:hidden">Swipe to browse</span>
+              <span className="hidden md:inline">Drag to browse</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
