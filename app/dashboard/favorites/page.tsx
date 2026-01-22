@@ -380,10 +380,11 @@ export default function FavoritesPage() {
                       {/* Cover Image - Gradient Background or First Image */}
                       <div className="h-24 relative bg-gradient-to-r from-primary/30 to-primary-light/30">
                         {character.images?.[0] && (
-                          <img
+                          <Image
                             src={character.images[0]}
                             alt=""
-                            className="w-full h-full object-cover opacity-50"
+                            fill
+                            className="object-cover opacity-50"
                           />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-surface-dark to-transparent" />
@@ -393,10 +394,12 @@ export default function FavoritesPage() {
                       <div className="px-4 pb-4 -mt-10 relative">
                         <Link href={`/character/${character.id}`}>
                           <div className="w-20 h-20 rounded-full border-4 border-surface-dark overflow-hidden mb-3 hover:scale-105 transition-transform">
-                            <img
+                            <Image
                               src={character.thumbnail}
                               alt={character.name}
-                              className="w-full h-full object-cover"
+                              width={80}
+                              height={80}
+                              className="object-cover"
                             />
                           </div>
                         </Link>

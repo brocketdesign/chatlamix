@@ -1248,9 +1248,11 @@ export default function ContentAutomationPage() {
                       className="rounded-xl bg-white/5 border border-white/10 overflow-hidden"
                     >
                       {content.image_url && (
-                        <img
+                        <Image
                           src={content.image_url}
                           alt="Generated"
+                          width={400}
+                          height={400}
                           className="w-full aspect-square object-cover"
                         />
                       )}

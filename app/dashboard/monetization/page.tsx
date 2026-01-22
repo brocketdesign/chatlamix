@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/supabase/auth-context";
 import Navigation from "@/components/Navigation";
 import Link from "next/link";
