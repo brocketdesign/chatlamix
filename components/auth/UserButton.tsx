@@ -49,7 +49,7 @@ export function UserButton({ afterSignOutUrl = "/" }: UserButtonProps) {
             alt="Avatar"
             width={40}
             height={40}
-            className="rounded-full object-cover"
+            className="rounded-full object-cover object-top"
           />
         ) : (
           initials

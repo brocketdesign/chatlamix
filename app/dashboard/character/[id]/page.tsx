@@ -564,7 +564,7 @@ export default function CharacterManagePage() {
                   alt={character.name}
                   width={40}
                   height={40}
-                  className="rounded-full object-cover border-2 border-primary"
+                  className="rounded-full object-cover object-top border-2 border-primary"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full gradient-primary" />
@@ -1371,7 +1371,7 @@ export default function CharacterManagePage() {
                         alt={`${character.name} profile`}
                         width={128}
                         height={128}
-                        className="rounded-full object-cover border-4 border-primary shadow-lg shadow-primary/20"
+                        className="rounded-full object-cover object-top border-4 border-primary shadow-lg shadow-primary/20"
                       />
                     ) : (
                       <div className="w-32 h-32 rounded-full gradient-primary flex items-center justify-center">

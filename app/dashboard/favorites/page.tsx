@@ -298,7 +298,7 @@ export default function FavoritesPage() {
                             alt={image.character.name}
                             width={32}
                             height={32}
-                            className="object-cover"
+                            className="object-cover object-top"
                           />
                         </div>
                       </Link>
@@ -399,7 +399,7 @@ export default function FavoritesPage() {
                               alt={character.name}
                               width={80}
                               height={80}
-                              className="object-cover"
+                              className="object-cover object-top"
                             />
                           </div>
                         </Link>

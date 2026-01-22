@@ -223,7 +223,7 @@ export default function ShowcaseGallery({ characters }: ShowcaseGalleryProps) {
                   alt={currentCharacter.name}
                   width={64}
                   height={64}
-                  className="relative rounded-full border-2 border-primary object-cover hover:border-white transition-colors"
+                  className="relative rounded-full border-2 border-primary object-cover object-top hover:border-white transition-colors"
                 />
               </Link>
             </div>

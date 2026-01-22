@@ -153,7 +153,7 @@ export default function CharacterProfile() {
               alt={character.name}
               width={128}
               height={128}
-              className="relative rounded-full border-4 border-primary object-cover"
+              className="relative rounded-full border-4 border-primary object-cover object-top"
             />
           </div>
           <div className="flex-1">

@@ -404,18 +404,18 @@ export default function DashboardPage() {
                 key={character.id}
                 className="glass border border-border rounded-2xl overflow-hidden hover:border-primary/50 transition-all group"
               >
-                <div className="aspect-square relative bg-surface-light">
+                <div className="aspect-square relative bg-surface-light flex items-center justify-center">
                   {character.thumbnail ? (
-                    <Image
-                      src={character.thumbnail}
-                      alt={character.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="w-20 h-20 rounded-full gradient-primary opacity-50" />
+                    <div className="w-3/4 aspect-square relative rounded-full overflow-hidden border-4 border-primary">
+                      <Image
+                        src={character.thumbnail}
+                        alt={character.name}
+                        fill
+                        className="object-cover object-top"
+                      />
                     </div>
+                  ) : (
+                    <div className="w-3/4 aspect-square rounded-full gradient-primary opacity-50" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>

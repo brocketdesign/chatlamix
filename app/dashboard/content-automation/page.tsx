@@ -475,7 +475,7 @@ export default function ContentAutomationPage() {
                     alt={char.name}
                     width={32}
                     height={32}
-                    className="rounded-full object-cover"
+                    className="rounded-full object-cover object-top"
                   />
                 )}
                 <span>{char.name}</span>
@@ -963,7 +963,7 @@ export default function ContentAutomationPage() {
                             alt={character.name}
                             width={48}
                             height={48}
-                            className="rounded-full object-cover"
+                            className="rounded-full object-cover object-top"
                           />
                         )}
                         <div>

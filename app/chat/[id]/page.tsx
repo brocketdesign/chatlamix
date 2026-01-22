@@ -539,7 +539,7 @@ export default function ChatPage() {
                 alt={character.name}
                 width={40}
                 height={40}
-                className="relative rounded-full object-cover border-2 border-primary"
+                className="relative rounded-full object-cover object-top border-2 border-primary"
               />
             ) : (
               <div className="relative w-10 h-10 rounded-full gradient-primary border-2 border-primary" />
