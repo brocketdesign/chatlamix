@@ -159,3 +159,85 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// POST - Generate an image from a chat message
+export async function POST(request: NextRequest) {
+  log("POST request started");
+  const startTime = Date.now();
+  
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      log("POST - Authentication required, no user");
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    log("POST - User authenticated", { userId: user.id });
+
+    if (!SEGMIND_API_KEY) {
+      log("POST - SEGMIND_API_KEY not configured");
+      return NextResponse.json(
+        { error: "Image generation API not configured" },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const { characterId, messageId, messageText, customPrompt } = body;
+
+    log("POST - Request body", { 
+      characterId, 
+      messageId, 
+      messageTextLength: messageText?.length,
+      hasCustomPrompt: !!customPrompt 
+    });
+
+    if (!characterId || !messageText) {
+      log("POST - Missing required params");
+      return NextResponse.json(
+        { error: "Character ID and message text are required" },
+        { status: 400 }
+      );
+    }
+
+    // Get character details
+    log("POST - Fetching character");
+    const { data: character, error: charError } = await supabase
+      .from("characters")
+      .select("*")
+      .eq("id", characterId)
+      .single();
+
+    if (charError || !character) {
+      log("POST - Character not found", { error: charError?.message });
+      return NextResponse.json(
+        { error: "Character not found" },
+        { status: 404 }
+      );
+    }
+
+    log("POST - Character loaded", {
+      characterId: character.id,
+      characterName: character.name,
+      hasMainFaceImage: !!character.main_face_image,
+      mainFaceImageLength: character.main_face_image?.length || 0,
+      mainFaceImagePreview: character.main_face_image?.substring(0, 80) || "none",
+      hasPhysicalAttributes: !!character.physical_attributes,
+    });
+
+    // (rest of POST to be added in subsequent commits)
+
+    return NextResponse.json({ success: true, message: "scaffolded" });
+  } catch (error) {
+    log("POST - Unexpected error (scaffold)", { error: String(error) });
+    return NextResponse.json(
+      { error: "Failed to generate image" },
+      { status: 500 }
+    );
+  }
+}
