@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
         character_id: characterId,
         image_url: storedImageUrl,
         prompt: fullPrompt,
-        is_main_face: !character.main_face_image && !customBaseFace,
+        is_main_face: false, // Generated images are never the main face - users must explicitly upload a base face
         gallery_status: 'unposted', // New images go to unposted section for review
         settings: {
           prompt: fullPrompt,
