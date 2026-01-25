@@ -209,8 +209,8 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     
     const requestBody = {
-      source_image: sourceImageUrl,  // The base face
-      target_image: targetImageUrl,  // The generated image
+      source_image: sourceImageUrl,  // The base face (character's reference face to extract)
+      target_image: targetImageUrl,  // The generated scene (destination image to apply face onto)
       additional_prompt: additionalPrompt,
       image_format: imageFormat,
       quality,
