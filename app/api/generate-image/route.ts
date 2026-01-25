@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CharacterImage, PhysicalAttributes, GalleryStatus } from "@/lib/types";
+import crypto from "crypto";
 
 // Extend timeout for image generation (120 seconds to accommodate generation + face swap)
 export const maxDuration = 120;
@@ -355,7 +356,20 @@ export async function POST(request: NextRequest) {
           if (faceSwapResult.success && faceSwapResult.imageUrl) {
             finalImageUrl = faceSwapResult.imageUrl;
             faceSwapApplied = true;
+            // Log hash comparison to verify face swap changed the image
+            // Extract base64 content from data URLs for proper comparison
+            const originalBase64 = imageUrl.includes(",") ? imageUrl.split(",")[1] : imageUrl;
+            const swappedBase64 = finalImageUrl.includes(",") ? finalImageUrl.split(",")[1] : finalImageUrl;
+            const originalHash = crypto.createHash("md5").update(originalBase64).digest("hex").substring(0, 16);
+            const swappedHash = crypto.createHash("md5").update(swappedBase64).digest("hex").substring(0, 16);
             console.log("[generate-image] Face swap applied successfully");
+            console.log(`[generate-image] Original image hash: ${originalHash}`);
+            console.log(`[generate-image] Face-swapped image hash: ${swappedHash}`);
+            console.log(`[generate-image] Images are different: ${originalHash !== swappedHash}`);
+            // Log debug info from face-swap API if available
+            if (faceSwapResult.debug) {
+              console.log(`[generate-image] Face swap debug info:`, faceSwapResult.debug);
+            }
           } else {
             console.error("[generate-image] Face swap response missing imageUrl:", faceSwapResult);
           }

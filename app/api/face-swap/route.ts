@@ -77,6 +77,8 @@ async function uploadImageToStorage(
         .from("character-images")
         .list("", { limit: 100, search: cachePrefix });
 
+      console.log(`[face-swap] Cache lookup for ${prefix}: found ${existingFiles?.length || 0} files with prefix '${cachePrefix}'`);
+      
       // Find exact filename match among results with matching prefix
       const exactMatch = existingFiles?.find(file => file.name === fileName);
       
@@ -84,8 +86,16 @@ async function uploadImageToStorage(
         const { data: { publicUrl } } = supabase.storage
           .from("character-images")
           .getPublicUrl(fileName);
+        
+        // Verify the cached file is accessible
+        console.log(`[face-swap] Found cached ${prefix} file: ${exactMatch.name}, size: ${exactMatch.metadata?.size || 'unknown'} bytes`);
         console.log(`[face-swap] Using cached ${prefix} image: ${publicUrl}`);
         return publicUrl;
+      } else {
+        console.log(`[face-swap] No exact match found for filename: ${fileName}`);
+        if (existingFiles && existingFiles.length > 0) {
+          console.log(`[face-swap] Available files:`, existingFiles.map(f => f.name).slice(0, 10));
+        }
       }
     }
 
@@ -129,6 +139,10 @@ async function uploadImageToStorage(
 
 export async function POST(request: NextRequest) {
   console.log("[face-swap] ========== POST request started ==========");
+  
+  // Check if running in development mode for debug logging
+  const isDev = process.env.NODE_ENV === 'development';
+  
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -159,13 +173,19 @@ export async function POST(request: NextRequest) {
       seed,
     } = body;
 
+    // Compute hashes of input images for tracking
+    const sourceHash = sourceImage ? generateImageHash(sourceImage) : "none";
+    const targetHash = targetImage ? generateImageHash(targetImage) : "none";
+
     console.log("[face-swap] Request params:", {
       hasSourceImage: !!sourceImage,
       sourceImageLength: sourceImage?.length || 0,
       sourceImageType: sourceImage?.startsWith("http") ? "URL" : sourceImage?.startsWith("data:") ? "DataURL" : "Base64",
+      sourceImageHash: sourceHash,
       hasTargetImage: !!targetImage,
       targetImageLength: targetImage?.length || 0,
       targetImageType: targetImage?.startsWith("http") ? "URL" : targetImage?.startsWith("data:") ? "DataURL" : "Base64",
+      targetImageHash: targetHash,
     });
 
     if (!sourceImage || !targetImage) {
@@ -205,9 +225,28 @@ export async function POST(request: NextRequest) {
 
     // Log FULL URLs for debugging
     console.log("[face-swap] ===== IMAGE URLs FOR API =====");
-    console.log("[face-swap] source_image (base face):", sourceImageUrl);
-    console.log("[face-swap] target_image (generated scene):", targetImageUrl);
+    console.log("[face-swap] source_image (base face - face to extract FROM):", sourceImageUrl);
+    console.log("[face-swap] target_image (generated scene - image to put face INTO):", targetImageUrl);
     console.log("[face-swap] ===============================");
+
+    // Verify URLs are accessible before calling API (only in development for debugging)
+    if (isDev) {
+      console.log("[face-swap] [DEBUG] Verifying source image URL is accessible...");
+      try {
+        const sourceCheck = await fetch(sourceImageUrl, { method: 'HEAD' });
+        console.log(`[face-swap] [DEBUG] Source image URL check: status=${sourceCheck.status}, content-type=${sourceCheck.headers.get('content-type')}, content-length=${sourceCheck.headers.get('content-length')}`);
+      } catch (e) {
+        console.error("[face-swap] [DEBUG] Source image URL verification failed:", e);
+      }
+
+      console.log("[face-swap] [DEBUG] Verifying target image URL is accessible...");
+      try {
+        const targetCheck = await fetch(targetImageUrl, { method: 'HEAD' });
+        console.log(`[face-swap] [DEBUG] Target image URL check: status=${targetCheck.status}, content-type=${targetCheck.headers.get('content-type')}, content-length=${targetCheck.headers.get('content-length')}`);
+      } catch (e) {
+        console.error("[face-swap] [DEBUG] Target image URL verification failed:", e);
+      }
+    }
 
     // Make request to Segmind Face Swap API with timeout
     console.log("[face-swap] Calling Segmind API...");
@@ -243,6 +282,7 @@ export async function POST(request: NextRequest) {
     }
     
     console.log(`[face-swap] Segmind API responded in ${Date.now() - startTime}ms, status: ${response.status}`);
+    console.log(`[face-swap] Response headers:`, Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -260,16 +300,52 @@ export async function POST(request: NextRequest) {
     const imageBuffer = await response.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString("base64");
     const imageUrl = `data:image/${imageFormat};base64,${base64Image}`;
+    
+    // Generate hash of result for comparison
+    const resultHash = crypto.createHash("md5").update(base64Image).digest("hex").substring(0, 16);
 
     console.log("[face-swap] ===== SUCCESS =====");
     console.log("[face-swap] Result image size:", imageBuffer.byteLength, "bytes");
+    console.log("[face-swap] Result image hash:", resultHash);
+    console.log("[face-swap] Input target hash was:", targetHash);
+    console.log("[face-swap] Input source hash was:", sourceHash);
+    console.log("[face-swap] Face swap modified image:", resultHash !== targetHash);
+    console.log("[face-swap] Result image preview (first 50 chars):", base64Image.substring(0, 50));
     console.log("[face-swap] ===================");
 
-    return NextResponse.json({
+    // Warn if result looks similar to target (might indicate face swap didn't work)
+    if (resultHash === targetHash) {
+      console.warn("[face-swap] WARNING: Result hash matches target hash - face swap may not have been applied!");
+    }
+
+    // Build response - include debug info only in development
+    const responseData: {
+      success: boolean;
+      imageUrl: string;
+      format: string;
+      debug?: {
+        sourceHash: string;
+        targetHash: string;
+        resultHash: string;
+        faceSwapApplied: boolean;
+      };
+    } = {
       success: true,
       imageUrl,
       format: imageFormat,
-    });
+    };
+    
+    // Only include debug info in development mode
+    if (isDev) {
+      responseData.debug = {
+        sourceHash,
+        targetHash,
+        resultHash,
+        faceSwapApplied: resultHash !== targetHash,
+      };
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.error("[face-swap] Request timed out");
