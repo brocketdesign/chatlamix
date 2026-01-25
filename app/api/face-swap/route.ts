@@ -8,11 +8,11 @@ export const maxDuration = 120;
 const SEGMIND_API_KEY = process.env.SEGMIND_API_KEY;
 const SEGMIND_FACESWAP_API = "https://api.segmind.com/v1/faceswap-v5";
 
-// Generate a short hash from image data for caching purposes
+// Generate a hash from image data for caching purposes
 function generateImageHash(imageData: string): string {
-  // Use first 1000 chars + length as a quick fingerprint (faster than hashing entire image)
-  const fingerprint = imageData.substring(0, 1000) + imageData.length.toString();
-  return crypto.createHash("md5").update(fingerprint).digest("hex").substring(0, 12);
+  // Hash the entire image data for reliable caching (prevents collisions)
+  // Note: For face images (typically < 1MB), this is fast enough
+  return crypto.createHash("md5").update(imageData).digest("hex").substring(0, 16);
 }
 
 // Helper function to upload base64/data URL image to Supabase and get public URL
@@ -69,13 +69,18 @@ async function uploadImageToStorage(
       ? `faceswap_${prefix}_${imageHash}.${extension}`
       : `faceswap_${prefix}_${Date.now()}.${extension}`;
 
-    // If using cache, check if file already exists
+    // If using cache, check if file already exists by exact name match
     if (useCache) {
+      // Use prefix filter to narrow down results instead of listing all files
+      const cachePrefix = `faceswap_${prefix}_`;
       const { data: existingFiles } = await supabase.storage
         .from("character-images")
-        .list("", { search: fileName });
+        .list("", { limit: 100, search: cachePrefix });
 
-      if (existingFiles && existingFiles.length > 0) {
+      // Find exact filename match among results with matching prefix
+      const exactMatch = existingFiles?.find(file => file.name === fileName);
+      
+      if (exactMatch) {
         const { data: { publicUrl } } = supabase.storage
           .from("character-images")
           .getPublicUrl(fileName);
@@ -173,14 +178,12 @@ export async function POST(request: NextRequest) {
 
     // The Segmind API requires actual HTTP URLs, not data URLs or base64
     // Upload images to Supabase storage and get public URLs
-    // Note: We don't cache source images because:
-    // 1. The hash-based caching uses only first 1000 chars which can cause collisions
-    // 2. The Supabase list() search is a partial match which can return wrong files
-    // 3. Source face images are small, so re-uploading is not expensive
+    // Source image (base face) uses caching since it's usually the same
+    // Target image (generated image) is always new, no caching
     console.log("[face-swap] Uploading images to storage for API compatibility...");
     
     const [sourceImageUrl, targetImageUrl] = await Promise.all([
-      uploadImageToStorage(supabase, sourceImage, "source", false),  // Don't cache source to ensure correct face is always used
+      uploadImageToStorage(supabase, sourceImage, "source", true),  // Cache source (base face)
       uploadImageToStorage(supabase, targetImage, "target", false), // Don't cache target
     ]);
 
