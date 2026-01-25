@@ -10,8 +10,18 @@ const SEGMIND_FACESWAP_API = "https://api.segmind.com/v1/faceswap-v5";
 
 // Generate a hash from image data for caching purposes
 function generateImageHash(imageData: string): string {
-  // Hash the entire image data for reliable caching (prevents collisions)
-  // Note: For face images (typically < 1MB), this is fast enough
+  // For large images, use a sampling approach that's fast but still reliable
+  // Sample from start, middle, and end of the data plus length
+  const len = imageData.length;
+  if (len > 10000) {
+    // For large images, sample strategically to avoid hashing entire content
+    const sample = imageData.substring(0, 2000) + 
+                   imageData.substring(Math.floor(len/2) - 1000, Math.floor(len/2) + 1000) +
+                   imageData.substring(len - 2000) +
+                   len.toString();
+    return crypto.createHash("md5").update(sample).digest("hex").substring(0, 16);
+  }
+  // For small images, hash the entire content
   return crypto.createHash("md5").update(imageData).digest("hex").substring(0, 16);
 }
 
@@ -62,12 +72,15 @@ async function uploadImageToStorage(
 
     // Generate hash for caching (used for source/base face images)
     const imageHash = generateImageHash(base64Data);
+    console.log(`[face-swap] Computed hash for ${prefix} image: ${imageHash} (base64Data length: ${base64Data.length})`);
     
     // For cached images (like base face), use hash-based filename
     // For non-cached images (like target), use timestamp-based filename
     const fileName = useCache
       ? `faceswap_${prefix}_${imageHash}.${extension}`
       : `faceswap_${prefix}_${Date.now()}.${extension}`;
+    
+    console.log(`[face-swap] Looking for ${prefix} file: ${fileName}`);
 
     // If using cache, check if file already exists by exact name match
     if (useCache) {
@@ -78,6 +91,9 @@ async function uploadImageToStorage(
         .list("", { limit: 100, search: cachePrefix });
 
       console.log(`[face-swap] Cache lookup for ${prefix}: found ${existingFiles?.length || 0} files with prefix '${cachePrefix}'`);
+      if (existingFiles && existingFiles.length > 0) {
+        console.log(`[face-swap] Available files:`, existingFiles.map(f => f.name).slice(0, 10));
+      }
       
       // Find exact filename match among results with matching prefix
       const exactMatch = existingFiles?.find(file => file.name === fileName);
@@ -88,14 +104,11 @@ async function uploadImageToStorage(
           .getPublicUrl(fileName);
         
         // Verify the cached file is accessible
-        console.log(`[face-swap] Found cached ${prefix} file: ${exactMatch.name}, size: ${exactMatch.metadata?.size || 'unknown'} bytes`);
+        console.log(`[face-swap] EXACT MATCH FOUND: ${exactMatch.name}, size: ${exactMatch.metadata?.size || 'unknown'} bytes`);
         console.log(`[face-swap] Using cached ${prefix} image: ${publicUrl}`);
         return publicUrl;
       } else {
         console.log(`[face-swap] No exact match found for filename: ${fileName}`);
-        if (existingFiles && existingFiles.length > 0) {
-          console.log(`[face-swap] Available files:`, existingFiles.map(f => f.name).slice(0, 10));
-        }
       }
     }
 
@@ -173,19 +186,16 @@ export async function POST(request: NextRequest) {
       seed,
     } = body;
 
-    // Compute hashes of input images for tracking
-    const sourceHash = sourceImage ? generateImageHash(sourceImage) : "none";
-    const targetHash = targetImage ? generateImageHash(targetImage) : "none";
-
+    // Note: We log the hash of the full sourceImage/targetImage (including data: prefix if present)
+    // but the cache uses the hash of just the base64Data (extracted in uploadImageToStorage)
+    // These hashes may differ - the cache hash is the authoritative one for file lookups
     console.log("[face-swap] Request params:", {
       hasSourceImage: !!sourceImage,
       sourceImageLength: sourceImage?.length || 0,
       sourceImageType: sourceImage?.startsWith("http") ? "URL" : sourceImage?.startsWith("data:") ? "DataURL" : "Base64",
-      sourceImageHash: sourceHash,
       hasTargetImage: !!targetImage,
       targetImageLength: targetImage?.length || 0,
       targetImageType: targetImage?.startsWith("http") ? "URL" : targetImage?.startsWith("data:") ? "DataURL" : "Base64",
-      targetImageHash: targetHash,
     });
 
     if (!sourceImage || !targetImage) {
@@ -228,25 +238,6 @@ export async function POST(request: NextRequest) {
     console.log("[face-swap] source_image (base face - face to extract FROM):", sourceImageUrl);
     console.log("[face-swap] target_image (generated scene - image to put face INTO):", targetImageUrl);
     console.log("[face-swap] ===============================");
-
-    // Verify URLs are accessible before calling API (only in development for debugging)
-    if (isDev) {
-      console.log("[face-swap] [DEBUG] Verifying source image URL is accessible...");
-      try {
-        const sourceCheck = await fetch(sourceImageUrl, { method: 'HEAD' });
-        console.log(`[face-swap] [DEBUG] Source image URL check: status=${sourceCheck.status}, content-type=${sourceCheck.headers.get('content-type')}, content-length=${sourceCheck.headers.get('content-length')}`);
-      } catch (e) {
-        console.error("[face-swap] [DEBUG] Source image URL verification failed:", e);
-      }
-
-      console.log("[face-swap] [DEBUG] Verifying target image URL is accessible...");
-      try {
-        const targetCheck = await fetch(targetImageUrl, { method: 'HEAD' });
-        console.log(`[face-swap] [DEBUG] Target image URL check: status=${targetCheck.status}, content-type=${targetCheck.headers.get('content-type')}, content-length=${targetCheck.headers.get('content-length')}`);
-      } catch (e) {
-        console.error("[face-swap] [DEBUG] Target image URL verification failed:", e);
-      }
-    }
 
     // Make request to Segmind Face Swap API with timeout
     console.log("[face-swap] Calling Segmind API...");
@@ -301,33 +292,22 @@ export async function POST(request: NextRequest) {
     const base64Image = Buffer.from(imageBuffer).toString("base64");
     const imageUrl = `data:image/${imageFormat};base64,${base64Image}`;
     
-    // Generate hash of result for comparison
+    // Generate hash of result
     const resultHash = crypto.createHash("md5").update(base64Image).digest("hex").substring(0, 16);
 
     console.log("[face-swap] ===== SUCCESS =====");
     console.log("[face-swap] Result image size:", imageBuffer.byteLength, "bytes");
     console.log("[face-swap] Result image hash:", resultHash);
-    console.log("[face-swap] Input target hash was:", targetHash);
-    console.log("[face-swap] Input source hash was:", sourceHash);
-    console.log("[face-swap] Face swap modified image:", resultHash !== targetHash);
     console.log("[face-swap] Result image preview (first 50 chars):", base64Image.substring(0, 50));
     console.log("[face-swap] ===================");
 
-    // Warn if result looks similar to target (might indicate face swap didn't work)
-    if (resultHash === targetHash) {
-      console.warn("[face-swap] WARNING: Result hash matches target hash - face swap may not have been applied!");
-    }
-
-    // Build response - include debug info only in development
+    // Build response
     const responseData: {
       success: boolean;
       imageUrl: string;
       format: string;
       debug?: {
-        sourceHash: string;
-        targetHash: string;
         resultHash: string;
-        faceSwapApplied: boolean;
       };
     } = {
       success: true,
@@ -338,10 +318,7 @@ export async function POST(request: NextRequest) {
     // Only include debug info in development mode
     if (isDev) {
       responseData.debug = {
-        sourceHash,
-        targetHash,
         resultHash,
-        faceSwapApplied: resultHash !== targetHash,
       };
     }
 
