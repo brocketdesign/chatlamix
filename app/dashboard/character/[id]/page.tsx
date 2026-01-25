@@ -18,6 +18,42 @@ const ASPECT_RATIOS = {
 
 type AspectRatioKey = keyof typeof ASPECT_RATIOS;
 
+// Scene type configurations for prompt guidance
+const SCENE_TYPES = {
+  portrait: { 
+    label: 'Portrait', 
+    description: 'Close-up or upper body shot',
+    promptModifier: 'portrait shot, close-up, face and shoulders visible, centered composition'
+  },
+  action: { 
+    label: 'Action', 
+    description: 'Dynamic movement or activity',
+    promptModifier: 'action shot, dynamic pose, movement captured, energetic'
+  },
+  full_body: { 
+    label: 'Full Body', 
+    description: 'Head to toe visible',
+    promptModifier: 'full body shot, head to toe visible, complete figure'
+  },
+  lifestyle: { 
+    label: 'Lifestyle', 
+    description: 'Casual everyday moment',
+    promptModifier: 'lifestyle photography, candid moment, natural and relaxed'
+  },
+  editorial: { 
+    label: 'Editorial', 
+    description: 'Fashion magazine style',
+    promptModifier: 'editorial style, fashion photography, artistic composition'
+  },
+  custom: { 
+    label: 'Custom Pose', 
+    description: 'Use only your description',
+    promptModifier: ''
+  },
+} as const;
+
+type SceneTypeKey = keyof typeof SCENE_TYPES;
+
 // Calculate coin cost based on image dimensions (matches backend logic)
 function getImageCoinCost(aspectRatio: AspectRatioKey): number {
   const { width, height } = ASPECT_RATIOS[aspectRatio];
@@ -48,6 +84,7 @@ export default function CharacterManagePage() {
 
   // Image generation form
   const [scenePrompt, setScenePrompt] = useState("");
+  const [sceneType, setSceneType] = useState<SceneTypeKey>('portrait');
   const [aspectRatio, setAspectRatio] = useState<AspectRatioKey>('square');
 
   // Social media sharing
@@ -143,7 +180,14 @@ export default function CharacterManagePage() {
 
     try {
       const { width, height } = ASPECT_RATIOS[aspectRatio];
-      console.log("[handleGenerateImage] Sending request with aspectRatio:", aspectRatio, "width:", width, "height:", height);
+      
+      // Combine scene type modifier with user's scene description
+      const sceneTypeConfig = SCENE_TYPES[sceneType];
+      const combinedScenePrompt = sceneTypeConfig.promptModifier
+        ? `${sceneTypeConfig.promptModifier}. ${scenePrompt}`
+        : scenePrompt;
+      
+      console.log("[handleGenerateImage] Sending request with aspectRatio:", aspectRatio, "width:", width, "height:", height, "sceneType:", sceneType);
       
       // Simulate phase changes based on typical timing
       // Image generation typically takes 10-20 seconds, then face swap another 5-10 seconds
@@ -166,7 +210,7 @@ export default function CharacterManagePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           characterId,
-          scenePrompt,
+          scenePrompt: combinedScenePrompt,
           aspectRatio,
           width: Number(width),
           height: Number(height),
@@ -793,6 +837,49 @@ export default function CharacterManagePage() {
                       rows={4}
                       className="w-full px-4 py-3 bg-surface-light border border-border rounded-xl focus:border-primary focus:outline-none transition-colors resize-none text-sm"
                     />
+                  </div>
+
+                  {/* Scene Type Selector */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-2">
+                      Scene Type
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.entries(SCENE_TYPES) as [SceneTypeKey, typeof SCENE_TYPES[SceneTypeKey]][]).map(([key, config]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setSceneType(key)}
+                          className={`relative flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all duration-200 group ${
+                            sceneType === key
+                              ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                              : 'border-border bg-surface-light hover:border-primary/50 hover:bg-surface'
+                          }`}
+                        >
+                          <span className={`text-xs font-medium ${
+                            sceneType === key ? 'text-primary-light' : 'text-gray-400'
+                          }`}>
+                            {config.label}
+                          </span>
+                          <span className={`text-[10px] mt-0.5 text-center ${
+                            sceneType === key ? 'text-primary/80' : 'text-gray-500'
+                          }`}>
+                            {config.description}
+                          </span>
+                          {/* Selected indicator */}
+                          {sceneType === key && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-gray-500 text-center">
+                      Scene type will be combined with your description
+                    </p>
                   </div>
 
                   {/* Aspect Ratio Selector */}
