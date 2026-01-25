@@ -10,9 +10,9 @@ const SEGMIND_FACESWAP_API = "https://api.segmind.com/v1/faceswap-v5";
 
 // Generate a hash from image data for caching purposes
 function generateImageHash(imageData: string): string {
-  // Use the full image data for accurate hashing to avoid collisions
+  // Use SHA-256 for better collision resistance when hashing image data
   // This ensures different images get different hashes even if they share similar prefixes
-  return crypto.createHash("md5").update(imageData).digest("hex").substring(0, 16);
+  return crypto.createHash("sha256").update(imageData).digest("hex").substring(0, 16);
 }
 
 // Helper function to upload base64/data URL image to Supabase and get public URL
