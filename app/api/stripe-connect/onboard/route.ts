@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Initialize Stripe lazily to avoid build-time errors
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Stripe secret key not configured");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+};
 
 // POST - Create Stripe Connect onboarding link
 export async function POST(request: NextRequest) {
@@ -46,6 +52,7 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
+      const stripe = getStripe();
       // Create a new Stripe Connect account (Express type for simpler onboarding)
       const account = await stripe.accounts.create({
         type: 'express',
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create onboarding link
+    const stripe = getStripe();
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const accountLink = await stripe.accountLinks.create({
       account: accountId,

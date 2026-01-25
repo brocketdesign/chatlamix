@@ -284,6 +284,20 @@ export default function DashboardPage() {
             </p>
           </Link>
 
+          {/* Character Auto-Generation Card */}
+          <Link
+            href="/dashboard/character-automation"
+            className="p-6 glass border border-border rounded-2xl hover:border-primary/50 transition-all group"
+          >
+            <div className="w-12 h-12 bg-surface-light rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <span className="text-2xl">🤖</span>
+            </div>
+            <h3 className="font-semibold text-lg mb-1">Character Generator</h3>
+            <p className="text-gray-400 text-sm">
+              Auto-generate diverse AI characters
+            </p>
+          </Link>
+
           {/* Monetization Card */}
           <Link
             href={premiumStatus?.isPremium ? "/dashboard/monetization" : "/dashboard/monetization/upgrade"}

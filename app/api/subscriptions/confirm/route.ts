@@ -3,7 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Initialize Stripe lazily to avoid build-time errors
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Stripe secret key not configured");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+};
 
 // Lazy initialization for service role client to avoid build-time errors
 function getSupabaseAdmin() {
@@ -28,6 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const stripe = getStripe();
     const body = await request.json();
     const { subscriptionId } = body;
 
