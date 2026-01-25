@@ -173,12 +173,14 @@ export async function POST(request: NextRequest) {
 
     // The Segmind API requires actual HTTP URLs, not data URLs or base64
     // Upload images to Supabase storage and get public URLs
-    // Source image (base face) uses caching since it's usually the same
-    // Target image (generated image) is always new, no caching
+    // Note: We don't cache source images because:
+    // 1. The hash-based caching uses only first 1000 chars which can cause collisions
+    // 2. The Supabase list() search is a partial match which can return wrong files
+    // 3. Source face images are small, so re-uploading is not expensive
     console.log("[face-swap] Uploading images to storage for API compatibility...");
     
     const [sourceImageUrl, targetImageUrl] = await Promise.all([
-      uploadImageToStorage(supabase, sourceImage, "source", true),  // Cache source (base face)
+      uploadImageToStorage(supabase, sourceImage, "source", false),  // Don't cache source to ensure correct face is always used
       uploadImageToStorage(supabase, targetImage, "target", false), // Don't cache target
     ]);
 
