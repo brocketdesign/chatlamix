@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      sourceImage, // The main face image (character's reference face) - will be target_image in API
-      targetImage, // The generated image to swap face into - will be source_image in API
+      sourceImage, // The main face image (character's reference face) - will be source_image in API
+      targetImage, // The generated image to swap face into - will be target_image in API
       additionalPrompt = "",
       imageFormat = "png",
       quality = 95,
@@ -200,8 +200,8 @@ export async function POST(request: NextRequest) {
 
     // Log FULL URLs for debugging
     console.log("[face-swap] ===== IMAGE URLs FOR API =====");
-    console.log("[face-swap] target_image (base face):", sourceImageUrl);
-    console.log("[face-swap] source_image (generated scene):", targetImageUrl);
+    console.log("[face-swap] source_image (base face):", sourceImageUrl);
+    console.log("[face-swap] target_image (generated scene):", targetImageUrl);
     console.log("[face-swap] ===============================");
 
     // Make request to Segmind Face Swap API with timeout
@@ -209,8 +209,8 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     
     const requestBody = {
-      target_image: sourceImageUrl,  // The base face (character's reference face)
-      source_image: targetImageUrl,  // The generated image to swap face into
+      source_image: sourceImageUrl,  // The base face
+      target_image: targetImageUrl,  // The generated image
       additional_prompt: additionalPrompt,
       image_format: imageFormat,
       quality,
