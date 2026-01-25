@@ -433,17 +433,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If this is the first image and no custom face was provided, set it as thumbnail and main face
-    // If custom face was used, set that as the main face instead
+    // Update character's main face and/or thumbnail if needed
     // Note: main_face_image should remain as base64 for face-swap operations
-    if (!character.main_face_image || !character.thumbnail) {
-      const mainFaceToSet = customBaseFace || finalImageUrl; // Keep base64 for face swapping
+    const updateData: { main_face_image?: string; thumbnail?: string } = {};
+    
+    // Only update main_face_image if:
+    // 1. A custom base face was provided for this generation, OR
+    // 2. The character doesn't have a main face yet
+    if (customBaseFace) {
+      // User explicitly provided a custom face for this generation - use it
+      updateData.main_face_image = customBaseFace;
+    } else if (!character.main_face_image) {
+      // Character has no main face yet - use the generated image as fallback
+      updateData.main_face_image = finalImageUrl;
+    }
+    // Note: If character already has a main_face_image and no customBaseFace was provided,
+    // we preserve the existing base face (don't overwrite it with the generated image)
+    
+    // Update thumbnail if not set
+    if (!character.thumbnail) {
+      updateData.thumbnail = storedImageUrl;
+    }
+    
+    // Only perform the update if there's something to update
+    if (Object.keys(updateData).length > 0) {
       await supabase
         .from("characters")
-        .update({
-          main_face_image: mainFaceToSet,
-          thumbnail: storedImageUrl, // Use storage URL for thumbnail display
-        })
+        .update(updateData)
         .eq("id", characterId);
     }
 
