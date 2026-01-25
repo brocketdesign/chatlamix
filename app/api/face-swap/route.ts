@@ -8,11 +8,11 @@ export const maxDuration = 120;
 const SEGMIND_API_KEY = process.env.SEGMIND_API_KEY;
 const SEGMIND_FACESWAP_API = "https://api.segmind.com/v1/faceswap-v5";
 
-// Generate a short hash from image data for caching purposes
+// Generate a hash from image data for caching purposes
 function generateImageHash(imageData: string): string {
-  // Use first 1000 chars + length as a quick fingerprint (faster than hashing entire image)
-  const fingerprint = imageData.substring(0, 1000) + imageData.length.toString();
-  return crypto.createHash("md5").update(fingerprint).digest("hex").substring(0, 12);
+  // Use the full image data for accurate hashing to avoid collisions
+  // This ensures different images get different hashes even if they share similar prefixes
+  return crypto.createHash("md5").update(imageData).digest("hex").substring(0, 16);
 }
 
 // Helper function to upload base64/data URL image to Supabase and get public URL
@@ -70,12 +70,15 @@ async function uploadImageToStorage(
       : `faceswap_${prefix}_${Date.now()}.${extension}`;
 
     // If using cache, check if file already exists
+    // Note: We need to check for exact filename match, not partial search
     if (useCache) {
       const { data: existingFiles } = await supabase.storage
         .from("character-images")
         .list("", { search: fileName });
 
-      if (existingFiles && existingFiles.length > 0) {
+      // Verify exact filename match (list with search does partial matching)
+      const exactMatch = existingFiles?.find(file => file.name === fileName);
+      if (exactMatch) {
         const { data: { publicUrl } } = supabase.storage
           .from("character-images")
           .getPublicUrl(fileName);

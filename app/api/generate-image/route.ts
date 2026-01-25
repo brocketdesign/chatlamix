@@ -437,18 +437,17 @@ export async function POST(request: NextRequest) {
     // Note: main_face_image should remain as base64 for face-swap operations
     const updateData: { main_face_image?: string; thumbnail?: string } = {};
     
-    // Only update main_face_image if:
-    // 1. A custom base face was provided for this generation, OR
-    // 2. The character doesn't have a main face yet
+    // Only update main_face_image if a custom base face was explicitly provided
+    // IMPORTANT: Never set the generated/face-swapped image as the main face
+    // The main_face_image must be an original face photo, not a generated result
     if (customBaseFace) {
       // User explicitly provided a custom face for this generation - use it
       updateData.main_face_image = customBaseFace;
-    } else if (!character.main_face_image) {
-      // Character has no main face yet - use the generated image as fallback
-      updateData.main_face_image = finalImageUrl;
     }
-    // Note: If character already has a main_face_image and no customBaseFace was provided,
-    // we preserve the existing base face (don't overwrite it with the generated image)
+    // Note: If character doesn't have a main_face_image and no customBaseFace was provided,
+    // we leave it unset. Users must explicitly upload a base face for face-swap to work.
+    // Previously this code would set the generated image as main_face_image which caused issues
+    // because the face-swapped result should never be used as the source for future face swaps.
     
     // Update thumbnail if not set
     if (!character.thumbnail) {
