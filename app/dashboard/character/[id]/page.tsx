@@ -183,9 +183,12 @@ export default function CharacterManagePage() {
       
       // Combine scene type modifier with user's scene description
       const sceneTypeConfig = SCENE_TYPES[sceneType];
-      const combinedScenePrompt = sceneTypeConfig.promptModifier
-        ? `${sceneTypeConfig.promptModifier}. ${scenePrompt}`
-        : scenePrompt;
+      let combinedScenePrompt = scenePrompt;
+      if (sceneTypeConfig.promptModifier && scenePrompt.trim()) {
+        combinedScenePrompt = `${sceneTypeConfig.promptModifier}. ${scenePrompt}`;
+      } else if (sceneTypeConfig.promptModifier) {
+        combinedScenePrompt = sceneTypeConfig.promptModifier;
+      }
       
       console.log("[handleGenerateImage] Sending request with aspectRatio:", aspectRatio, "width:", width, "height:", height, "sceneType:", sceneType);
       
