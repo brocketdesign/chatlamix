@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      sourceImage, // The main face image (character's reference face) - will be target_image in API
-      targetImage, // The generated image to swap face into - will be source_image in API
+      sourceImage, // The main face image (character's reference face) - will be source_image in API
+      targetImage, // The generated image to swap face into - will be target_image in API
       additionalPrompt = "",
       imageFormat = "png",
       quality = 95,
@@ -209,8 +209,8 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     
     const requestBody = {
-      source_image: sourceImageUrl,  // The base face
-      target_image: targetImageUrl,  // The generated image
+      source_image: sourceImageUrl,  // The base face (character's reference face to extract)
+      target_image: targetImageUrl,  // The generated scene (destination image to apply face onto)
       additional_prompt: additionalPrompt,
       image_format: imageFormat,
       quality,
