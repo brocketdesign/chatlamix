@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Initialize Stripe lazily to avoid build-time errors
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Stripe secret key not configured");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+};
 
 // GET - Get Stripe Connect account status
 export async function GET(request: NextRequest) {
@@ -37,6 +43,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch current account status from Stripe
     try {
+      const stripe = getStripe();
       const account = await stripe.accounts.retrieve(settings.stripe_connect_account_id);
 
       // Update local settings with latest status
@@ -123,6 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create login link for existing accounts
+    const stripe = getStripe();
     const loginLink = await stripe.accounts.createLoginLink(
       settings.stripe_connect_account_id
     );

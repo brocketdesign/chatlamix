@@ -11,9 +11,15 @@ import {
 } from "@/lib/types";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI lazily to avoid build-time errors
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured");
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 // Content type descriptions for prompt generation
 const CONTENT_TYPE_CONTEXT: Record<ContentType, string> = {
@@ -205,6 +211,7 @@ Respond with a JSON object:
   ]
 }`;
 
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [

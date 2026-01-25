@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI lazily to avoid build-time errors
+const getOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured");
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 // Validate that an uploaded image is a face using OpenAI's Vision API
 export async function POST(request: NextRequest) {
@@ -26,6 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const openai = getOpenAI();
     const body = await request.json();
     const { imageBase64 } = body;
 
