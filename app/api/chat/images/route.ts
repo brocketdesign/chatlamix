@@ -568,26 +568,33 @@ export async function POST(request: NextRequest) {
           log("POST - Saved to chat_images", { imageId: chatImage?.id });
         }
 
-        // Also add to character_images gallery
-        const { error: galleryError } = await supabase.from("character_images").insert({
-          character_id: characterId,
-          image_url: storedImageUrl,
-          prompt: imagePrompt,
-          is_main_face: false,
-          gallery_status: "unposted",
-          settings: { 
-            width: 1024, 
-            height: 1024,
-            source: "chat",
-            original_message: messageText,
-            faceSwapApplied,
-          },
-        });
+        // Only add to character_images gallery if the user owns the character
+        // This respects RLS policy which only allows character owners to insert
+        const isCharacterOwner = character.user_id === user.id;
+        
+        if (isCharacterOwner) {
+          const { error: galleryError } = await supabase.from("character_images").insert({
+            character_id: characterId,
+            image_url: storedImageUrl,
+            prompt: imagePrompt,
+            is_main_face: false,
+            gallery_status: "unposted",
+            settings: { 
+              width: 1024, 
+              height: 1024,
+              source: "chat",
+              original_message: messageText,
+              faceSwapApplied,
+            },
+          });
 
-        if (galleryError) {
-          log("POST - Error saving to gallery", { error: galleryError.message });
+          if (galleryError) {
+            log("POST - Error saving to gallery", { error: galleryError.message });
+          } else {
+            log("POST - Saved to character_images gallery");
+          }
         } else {
-          log("POST - Saved to character_images gallery");
+          log("POST - Skipping character_images gallery (user does not own character)");
         }
 
         // Create an image message in chat (from character)
