@@ -74,7 +74,8 @@ function buildCharacterPrompt(
     .join(", ");
 
   // Combine character description with scene prompt
-  return `Portrait photography, ${characterDescription}. ${scenePrompt}. High quality, detailed, professional photography, 8k, sharp focus, beautiful lighting.`;
+  // IMPORTANT: Include face visibility requirements for face swap compatibility
+  return `Portrait photography, ${characterDescription}. ${scenePrompt}. High quality, detailed, professional photography, 8k, sharp focus, beautiful lighting, face clearly visible, front-facing or three-quarter view.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -110,8 +111,8 @@ export async function POST(request: NextRequest) {
       steps = 8,
       guidanceScale = 1,
       seed = -1,
-      imageFormat = "webp",
-      quality = 90,
+      imageFormat = "png", // Changed from webp to png for better face detection compatibility
+      quality = 95, // Increased quality for better face detection
       customBaseFace, // User-uploaded base face for this generation
     } = body;
     
@@ -355,20 +356,32 @@ export async function POST(request: NextRequest) {
           const faceSwapResult = await faceSwapResponse.json();
           if (faceSwapResult.success && faceSwapResult.imageUrl) {
             finalImageUrl = faceSwapResult.imageUrl;
-            faceSwapApplied = true;
+            // Use the API's determination of whether face swap actually worked
+            faceSwapApplied = faceSwapResult.faceSwapApplied === true;
+            const confidence = faceSwapResult.confidence || "unknown";
+            
             // Log hash comparison to verify face swap changed the image
-            // Extract base64 content from data URLs for proper comparison
             const originalBase64 = imageUrl.includes(",") ? imageUrl.split(",")[1] : imageUrl;
             const swappedBase64 = finalImageUrl.includes(",") ? finalImageUrl.split(",")[1] : finalImageUrl;
             const originalHash = crypto.createHash("md5").update(originalBase64).digest("hex").substring(0, 16);
             const swappedHash = crypto.createHash("md5").update(swappedBase64).digest("hex").substring(0, 16);
-            console.log("[generate-image] Face swap applied successfully");
+            
+            console.log("[generate-image] Face swap API returned successfully");
+            console.log("[generate-image] Face swap actually applied:", faceSwapApplied);
+            console.log("[generate-image] Confidence level:", confidence);
             console.log(`[generate-image] Original image hash: ${originalHash}`);
             console.log(`[generate-image] Face-swapped image hash: ${swappedHash}`);
             console.log(`[generate-image] Images are different: ${originalHash !== swappedHash}`);
+            
             // Log debug info from face-swap API if available
             if (faceSwapResult.debug) {
               console.log(`[generate-image] Face swap debug info:`, faceSwapResult.debug);
+            }
+            
+            // Warn if face swap likely failed
+            if (!faceSwapApplied) {
+              console.warn("[generate-image] WARNING: Face swap likely failed - the face may not have been detected in the target image");
+              console.warn("[generate-image] TIP: Try generating an image with a more visible, front-facing face");
             }
           } else {
             console.error("[generate-image] Face swap response missing imageUrl:", faceSwapResult);

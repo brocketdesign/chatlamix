@@ -97,7 +97,8 @@ function buildChatImagePrompt(
     .join(", ");
 
   // User's message is the PRIMARY focus, character description is secondary
-  return `${userMessage}. The subject is a ${characterDescription}, ${fashionStyle} style. High quality, detailed, sharp focus, beautiful lighting.`;
+  // IMPORTANT: Include face visibility requirements for face swap compatibility
+  return `${userMessage}. The subject is a ${characterDescription}, ${fashionStyle} style. High quality, detailed, sharp focus, beautiful lighting, face clearly visible, front-facing or three-quarter view.`;
 }
 
 // GET - Get chat images for a character/session
@@ -359,14 +360,15 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         prompt: imagePrompt,
-        negative_prompt: "ugly, deformed, noisy, blurry, low quality, distorted, disfigured, bad anatomy",
+        negative_prompt: "ugly, deformed, noisy, blurry, low quality, distorted, disfigured, bad anatomy, face obscured, back of head",
         steps: 8,
         guidance_scale: 1,
         seed: -1,
         width: 1024,
         height: 1024,
-        img_format: "webp",
-        quality: 90,
+        image_format: "png",  // PNG for better face detection compatibility
+        quality: 95,
+        base_64: true,  // Request base64 response
       }),
     });
 
@@ -384,12 +386,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get image as base64
-    const imageBuffer = await segmindResponse.arrayBuffer();
-    const base64Image = Buffer.from(imageBuffer).toString("base64");
-    let imageUrl = `data:image/webp;base64,${base64Image}`;
+    // Get image as base64 - handle both JSON and binary responses
+    const contentType = segmindResponse.headers.get("content-type") || "";
+    let base64Image: string;
+    let imageBuffer: ArrayBuffer;
+    
+    if (contentType.includes("application/json")) {
+      const result = await segmindResponse.json();
+      base64Image = result.image;
+      imageBuffer = Buffer.from(base64Image, "base64");
+    } else {
+      imageBuffer = await segmindResponse.arrayBuffer();
+      base64Image = Buffer.from(imageBuffer).toString("base64");
+    }
+    
+    let imageUrl = `data:image/png;base64,${base64Image}`;
 
-    log("POST - Image generated successfully", { imageSizeBytes: imageBuffer.byteLength });
+    log("POST - Image generated successfully", { imageSizeBytes: imageBuffer.byteLength, format: "png" });
 
     // ========== FACE SWAP SECTION ==========
     // Check if character has a main face image for face swapping
