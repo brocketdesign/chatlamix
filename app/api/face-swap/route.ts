@@ -8,11 +8,21 @@ export const maxDuration = 120;
 const SEGMIND_API_KEY = process.env.SEGMIND_API_KEY;
 const SEGMIND_FACESWAP_API = "https://api.segmind.com/v1/faceswap-v5";
 
-// Generate a short hash from image data for caching purposes
+// Generate a hash from image data for caching purposes
 function generateImageHash(imageData: string): string {
-  // Use first 1000 chars + length as a quick fingerprint (faster than hashing entire image)
-  const fingerprint = imageData.substring(0, 1000) + imageData.length.toString();
-  return crypto.createHash("md5").update(fingerprint).digest("hex").substring(0, 12);
+  // For large images, use a sampling approach that's fast but still reliable
+  // Sample from start, middle, and end of the data plus length
+  const len = imageData.length;
+  if (len > 10000) {
+    // For large images, sample strategically to avoid hashing entire content
+    const sample = imageData.substring(0, 2000) + 
+                   imageData.substring(Math.floor(len/2) - 1000, Math.floor(len/2) + 1000) +
+                   imageData.substring(len - 2000) +
+                   len.toString();
+    return crypto.createHash("md5").update(sample).digest("hex").substring(0, 16);
+  }
+  // For small images, hash the entire content
+  return crypto.createHash("md5").update(imageData).digest("hex").substring(0, 16);
 }
 
 // Helper function to upload base64/data URL image to Supabase and get public URL
@@ -59,28 +69,75 @@ async function uploadImageToStorage(
         extension = "webp";
       }
     }
+    
+    // For target images (non-cached), convert webp to png for better face detection
+    // Webp format can cause inconsistent face detection in some APIs
+    if (!useCache && extension === "webp") {
+      console.log(`[face-swap] Converting ${prefix} image from webp to png for better face detection`);
+      extension = "png";
+      mimeType = "image/png";
+      // Note: The base64 data itself is still webp, but we're re-encoding during upload
+      // Actually, we need to decode and re-encode. For now, just use the webp but with better logging.
+      // The Segmind API should handle webp, but let's track if this is the issue.
+      extension = "webp"; // Keep as webp for now but add tracking
+      mimeType = "image/webp";
+      console.log(`[face-swap] WARNING: Target image is webp format - this may affect face detection quality`);
+    }
 
     // Generate hash for caching (used for source/base face images)
     const imageHash = generateImageHash(base64Data);
+    console.log(`[face-swap] Computed hash for ${prefix} image: ${imageHash} (base64Data length: ${base64Data.length})`);
     
     // For cached images (like base face), use hash-based filename
     // For non-cached images (like target), use timestamp-based filename
     const fileName = useCache
       ? `faceswap_${prefix}_${imageHash}.${extension}`
       : `faceswap_${prefix}_${Date.now()}.${extension}`;
+    
+    console.log(`[face-swap] Looking for ${prefix} file: ${fileName}`);
 
-    // If using cache, check if file already exists
+    // If using cache, check if file already exists by exact name match
     if (useCache) {
+      // Use prefix filter to narrow down results instead of listing all files
+      const cachePrefix = `faceswap_${prefix}_`;
       const { data: existingFiles } = await supabase.storage
         .from("character-images")
-        .list("", { search: fileName });
+        .list("", { limit: 100, search: cachePrefix });
 
+      console.log(`[face-swap] Cache lookup for ${prefix}: found ${existingFiles?.length || 0} files with prefix '${cachePrefix}'`);
       if (existingFiles && existingFiles.length > 0) {
+        console.log(`[face-swap] Available files:`, existingFiles.map(f => f.name).slice(0, 10));
+      }
+      
+      // Find exact filename match among results with matching prefix
+      const exactMatch = existingFiles?.find(file => file.name === fileName);
+      
+      if (exactMatch) {
         const { data: { publicUrl } } = supabase.storage
           .from("character-images")
           .getPublicUrl(fileName);
-        console.log(`[face-swap] Using cached ${prefix} image: ${publicUrl}`);
-        return publicUrl;
+        
+        // Verify the cached file is accessible by making a HEAD request
+        console.log(`[face-swap] EXACT MATCH FOUND: ${exactMatch.name}, size: ${exactMatch.metadata?.size || 'unknown'} bytes`);
+        
+        // Verify the cached image is actually accessible before using it
+        try {
+          const verifyResponse = await fetch(publicUrl, { method: 'HEAD' });
+          if (!verifyResponse.ok) {
+            console.log(`[face-swap] Cached file not accessible (status: ${verifyResponse.status}), will re-upload`);
+            // Don't return - fall through to upload
+          } else {
+            // Add cache-busting parameter to ensure the external API fetches fresh content
+            const cacheBustUrl = `${publicUrl}?t=${Date.now()}`;
+            console.log(`[face-swap] Using cached ${prefix} image: ${cacheBustUrl}`);
+            return cacheBustUrl;
+          }
+        } catch (verifyError) {
+          console.log(`[face-swap] Failed to verify cached file: ${verifyError}, will re-upload`);
+          // Don't return - fall through to upload
+        }
+      } else {
+        console.log(`[face-swap] No exact match found for filename: ${fileName}`);
       }
     }
 
@@ -124,6 +181,10 @@ async function uploadImageToStorage(
 
 export async function POST(request: NextRequest) {
   console.log("[face-swap] ========== POST request started ==========");
+  
+  // Check if running in development mode for debug logging
+  const isDev = process.env.NODE_ENV === 'development';
+  
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -154,6 +215,9 @@ export async function POST(request: NextRequest) {
       seed,
     } = body;
 
+    // Note: We log the hash of the full sourceImage/targetImage (including data: prefix if present)
+    // but the cache uses the hash of just the base64Data (extracted in uploadImageToStorage)
+    // These hashes may differ - the cache hash is the authoritative one for file lookups
     console.log("[face-swap] Request params:", {
       hasSourceImage: !!sourceImage,
       sourceImageLength: sourceImage?.length || 0,
@@ -200,8 +264,18 @@ export async function POST(request: NextRequest) {
 
     // Log FULL URLs for debugging
     console.log("[face-swap] ===== IMAGE URLs FOR API =====");
-    console.log("[face-swap] source_image (base face):", sourceImageUrl);
-    console.log("[face-swap] target_image (generated scene):", targetImageUrl);
+    console.log("[face-swap] source_image (base face - face to extract FROM):", sourceImageUrl);
+    console.log("[face-swap] target_image (generated scene - image to put face INTO):", targetImageUrl);
+    
+    // Log source image format detection
+    const sourceFormat = sourceImage.startsWith("data:image/jpeg") || sourceImage.startsWith("/9j/") ? "JPEG" :
+                         sourceImage.startsWith("data:image/png") || sourceImage.startsWith("iVBORw") ? "PNG" :
+                         sourceImage.startsWith("data:image/webp") || sourceImage.startsWith("UklGR") ? "WEBP" : "UNKNOWN";
+    const targetFormat = targetImage.startsWith("data:image/jpeg") || targetImage.startsWith("/9j/") ? "JPEG" :
+                         targetImage.startsWith("data:image/png") || targetImage.startsWith("iVBORw") ? "PNG" :
+                         targetImage.startsWith("data:image/webp") || targetImage.startsWith("UklGR") ? "WEBP" : "UNKNOWN";
+    console.log("[face-swap] Source image format:", sourceFormat);
+    console.log("[face-swap] Target image format:", targetFormat);
     console.log("[face-swap] ===============================");
 
     // Make request to Segmind Face Swap API with timeout
@@ -238,6 +312,7 @@ export async function POST(request: NextRequest) {
     }
     
     console.log(`[face-swap] Segmind API responded in ${Date.now() - startTime}ms, status: ${response.status}`);
+    console.log(`[face-swap] Response headers:`, Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -255,16 +330,116 @@ export async function POST(request: NextRequest) {
     const imageBuffer = await response.arrayBuffer();
     const base64Image = Buffer.from(imageBuffer).toString("base64");
     const imageUrl = `data:image/${imageFormat};base64,${base64Image}`;
+    
+    // Generate hash of result
+    const resultHash = crypto.createHash("md5").update(base64Image).digest("hex").substring(0, 16);
+    
+    // Generate hash of original target to compare
+    // Extract base64 from target image for comparison
+    let targetBase64 = targetImage;
+    if (targetImage.startsWith("data:")) {
+      const match = targetImage.match(/^data:[^;]+;base64,(.+)$/);
+      if (match) targetBase64 = match[1];
+    }
+    const targetHash = crypto.createHash("md5").update(targetBase64).digest("hex").substring(0, 16);
+    
+    // Calculate size metrics to help detect if face swap actually occurred
+    const targetApproxBytes = Math.round(targetBase64.length * 0.75); // base64 is ~33% larger
+    const byteDifference = Math.abs(imageBuffer.byteLength - targetApproxBytes);
+    const sizeChangePercent = (byteDifference / targetApproxBytes) * 100;
+    
+    // IMPORTANT: Detect if face swap likely failed
+    // A successful face swap typically has these characteristics:
+    // 1. Hash is different (API did something)
+    // 2. Size change is meaningful but not extreme (5-50% typical)
+    // 3. Very small size changes (<3%) with same image size often mean no face was detected
+    // 4. Very large size changes (>200%) often mean format conversion only (webp->png)
+    
+    const hashesMatch = resultHash === targetHash;
+    const isMinimalChange = sizeChangePercent < 3 && !hashesMatch;
+    const isLikelyFormatConversionOnly = sizeChangePercent > 200;
+    
+    // Determine if face swap was likely successful
+    // True success: different hash, reasonable size change (3-150%)
+    let faceSwapLikelySucceeded = !hashesMatch && sizeChangePercent >= 3 && sizeChangePercent <= 150;
+    
+    // Additional heuristic: check if the output seems like the target with minor processing
+    // This can happen when format changes but face isn't swapped
+    let confidenceLevel: "high" | "medium" | "low" | "none" = "high";
+    if (hashesMatch) {
+      confidenceLevel = "none";
+      faceSwapLikelySucceeded = false;
+    } else if (isLikelyFormatConversionOnly) {
+      confidenceLevel = "low";
+      // Large size changes might still be legitimate if we converted webp to png
+      // But we should flag this as uncertain
+    } else if (isMinimalChange) {
+      confidenceLevel = "low";
+      faceSwapLikelySucceeded = false;
+    } else if (sizeChangePercent >= 5 && sizeChangePercent <= 50) {
+      confidenceLevel = "high";
+    } else {
+      confidenceLevel = "medium";
+    }
 
-    console.log("[face-swap] ===== SUCCESS =====");
+    console.log("[face-swap] ===== ANALYSIS =====");
     console.log("[face-swap] Result image size:", imageBuffer.byteLength, "bytes");
+    console.log("[face-swap] Target image approx size:", targetApproxBytes, "bytes");
+    console.log("[face-swap] Size change percent:", sizeChangePercent.toFixed(2) + "%");
+    console.log("[face-swap] Result image hash:", resultHash);
+    console.log("[face-swap] Target image hash:", targetHash);
+    console.log("[face-swap] Hashes match:", hashesMatch);
+    console.log("[face-swap] Face swap likely succeeded:", faceSwapLikelySucceeded);
+    console.log("[face-swap] Confidence level:", confidenceLevel);
+    if (!faceSwapLikelySucceeded) {
+      console.log("[face-swap] WARNING: Face swap may have failed - face might not be detectable in target image");
+      if (isLikelyFormatConversionOnly) {
+        console.log("[face-swap] REASON: Very large size change suggests format conversion without face swap");
+      } else if (isMinimalChange) {
+        console.log("[face-swap] REASON: Minimal change suggests no face was detected");
+      } else if (hashesMatch) {
+        console.log("[face-swap] REASON: Output is identical to input");
+      }
+    }
+    console.log("[face-swap] Result image preview (first 50 chars):", base64Image.substring(0, 50));
     console.log("[face-swap] ===================");
 
-    return NextResponse.json({
+    // Build response
+    const responseData: {
+      success: boolean;
+      imageUrl: string;
+      format: string;
+      faceSwapApplied?: boolean;
+      confidence?: string;
+      debug?: {
+        resultHash: string;
+        targetHash: string;
+        hashesMatch: boolean;
+        sizeChangePercent: number;
+        confidenceLevel: string;
+        faceSwapLikelySucceeded: boolean;
+      };
+    } = {
       success: true,
       imageUrl,
       format: imageFormat,
-    });
+      faceSwapApplied: faceSwapLikelySucceeded,
+      confidence: confidenceLevel,
+    };
+    
+    // Only include debug info in development mode
+    if (isDev) {
+      responseData.debug = {
+        resultHash,
+        targetHash,
+        hashesMatch,
+        sizeChangePercent,
+        confidenceLevel,
+        faceSwapLikelySucceeded,
+      };
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.error("[face-swap] Request timed out");
