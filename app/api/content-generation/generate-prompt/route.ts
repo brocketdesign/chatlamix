@@ -169,15 +169,17 @@ export async function POST(request: NextRequest) {
       ? `\n\nPreviously used prompts (AVOID similar ideas):\n${previousPrompts.slice(-10).map(p => `- ${p}`).join("\n")}`
       : "";
 
-    const systemPrompt = `You are a creative content strategist for AI influencers on social media. 
+    const systemPrompt = `You are a creative content strategist for AI influencers on social media.
 Your task is to generate unique, engaging image prompts that will help create consistent, high-quality content for an AI influencer.
 
 The prompts should be:
-1. Detailed enough for image generation (describe pose, setting, lighting, mood)
+1. CONCISE - Maximum 500 characters. Focus on key visual elements only (pose, setting, lighting, mood)
 2. Consistent with the character's personality and appearance
 3. Appropriate for social media (Instagram, TikTok, etc.)
 4. Diverse and creative - avoid repetitive ideas
 5. Trendy and engaging for the target audience
+
+IMPORTANT: Keep prompts SHORT and FOCUSED. No long descriptions - just essential visual keywords and style directions.
 
 For each prompt, also provide:
 - A catchy caption that fits the character's voice
