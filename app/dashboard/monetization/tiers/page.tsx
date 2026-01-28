@@ -62,7 +62,7 @@ export default function TierManagementPage() {
     try {
       const [tiersRes, charsRes] = await Promise.all([
         fetch("/api/tiers"),
-        fetch("/api/characters"),
+        fetch("/api/characters?type=user"),
       ]);
 
       if (tiersRes.ok) {

@@ -117,7 +117,7 @@ export default function ContentAutomationPage() {
     setLoading(true);
     try {
       const [charsRes, schedulesRes, templatesRes, contentRes, accountsRes] = await Promise.all([
-        fetch("/api/characters"),
+        fetch("/api/characters?type=user"),
         fetch("/api/content-generation"),
         fetch("/api/social-media/schedule-template"),
         fetch("/api/content-generation/execute?limit=20"),
