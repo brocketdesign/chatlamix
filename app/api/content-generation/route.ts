@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
         include_hashtags: includeHashtags,
         hashtag_count: hashtagCount,
         auto_post: autoPost,
-        scheduling_template_id: schedulingTemplateId,
+        scheduling_template_id: schedulingTemplateId || null,
         target_platforms: targetPlatforms,
         auto_connect_to_schedule_template: autoConnectToScheduleTemplate,
         next_scheduled_at: nextScheduledAt.toISOString(),
