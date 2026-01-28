@@ -1,4 +1,4 @@
--- Supabase Database Schema for Chatlamix
+-- Supabase Database Schema for Artsogen
 -- Run this in your Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
 
 -- Enable UUID extension

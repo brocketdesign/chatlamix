@@ -4,15 +4,15 @@ import { AdminFloatingButton } from "@/components/admin/AdminFloatingButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Chatlamix - AI Influencer Platform",
+  title: "Artsogen - AI Influencer Platform",
   description: "Create, customize, and interact with virtual AI characters",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Chatlamix",
+    title: "Artsogen",
   },
-  applicationName: "Chatlamix",
+  applicationName: "Artsogen",
   formatDetection: {
     telephone: false,
   },

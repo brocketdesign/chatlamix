@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         business_type: 'individual',
         metadata: {
           user_id: user.id,
-          platform: 'chatlamix',
+          platform: 'artsogen',
         },
         settings: {
           payouts: {

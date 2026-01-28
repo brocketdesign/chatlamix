@@ -320,7 +320,7 @@ function PayoutSettingsContent() {
               <span className="text-2xl font-bold text-primary">15%</span>
             </div>
             <p className="text-gray-500 text-sm mt-2">
-              Chatlamix takes a 15% fee on all earnings from tips and subscriptions. 
+              Artsogen takes a 15% fee on all earnings from tips and subscriptions. 
               This fee covers payment processing, platform maintenance, and support.
             </p>
           </div>
@@ -399,7 +399,7 @@ function Header() {
       <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-2xl font-bold gradient-text">
-            Chatlamix
+            Artsogen
           </Link>
           <span className="text-gray-400">|</span>
           <Link href="/dashboard/monetization" className="text-gray-400 hover:text-white transition-colors">

@@ -85,7 +85,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-3xl font-bold gradient-text mb-2 inline-block">
-            Chatlamix
+            Artsogen
           </Link>
           <h1 className="text-2xl font-bold text-white mt-4 mb-2">Create Account</h1>
           <p className="text-gray-400">Start creating your AI influencers today</p>

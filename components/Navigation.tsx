@@ -85,7 +85,7 @@ export default function Navigation({ showLogo = true, title, transparent = false
           <div className="flex items-center gap-4">
             {showLogo && (
               <Link href="/" className="text-2xl font-bold gradient-text">
-                Chatlamix
+                Artsogen
               </Link>
             )}
             {title && (
@@ -132,7 +132,7 @@ export default function Navigation({ showLogo = true, title, transparent = false
           <div className="flex items-center gap-3">
             {showLogo && (
               <Link href="/" className="text-xl font-bold gradient-text">
-                Chatlamix
+                Artsogen
               </Link>
             )}
             {title && !showLogo && (
