@@ -394,7 +394,7 @@ export default function UpgradePremiumPage() {
                 a: "Earnings are accumulated in your account. Once you reach the minimum threshold ($20), you can request a payout to your PayPal or bank account. Payouts are processed within 5-7 business days.",
               },
               {
-                q: "What percentage does Chatlamix take?",
+                q: "What percentage does Artsogen take?",
                 a: "We take a 15% platform fee on all earnings from subscriptions and tips. This covers payment processing, hosting, and platform maintenance.",
               },
               {
@@ -431,7 +431,7 @@ function Header() {
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-2xl font-bold gradient-text">
-            Chatlamix
+            Artsogen
           </Link>
         </div>
         <div className="flex items-center gap-4">

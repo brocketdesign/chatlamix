@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
           platform_fee: platformFee.toString(),
           net_amount: netAmount.toString(),
         },
-        description: `Chatlamix creator payout - $${netAmount.toFixed(2)}`,
+        description: `Artsogen creator payout - $${netAmount.toFixed(2)}`,
       });
 
       // Update payout request with Stripe transfer ID

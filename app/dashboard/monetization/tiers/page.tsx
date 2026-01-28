@@ -409,7 +409,7 @@ function Header() {
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-2xl font-bold gradient-text">
-            Chatlamix
+            Artsogen
           </Link>
           <span className="text-gray-400">|</span>
           <Link href="/dashboard/monetization" className="text-gray-400 hover:text-white transition-colors">

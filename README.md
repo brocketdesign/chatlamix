@@ -1,6 +1,6 @@
-# Chatlamix - AI Influencer Platform
+# Artsogen - AI Influencer Platform
 
-Chatlamix is an AI-powered platform for creating, customizing, and interacting with virtual AI characters. It enables users to create their own AI influencers with consistent appearances and engaging personalities for chat-based experiences.
+Artsogen is an AI-powered platform for creating, customizing, and interacting with virtual AI characters. It enables users to create their own AI influencers with consistent appearances and engaging personalities for chat-based experiences.
 
 ## Features
 
@@ -36,8 +36,8 @@ Chatlamix is an AI-powered platform for creating, customizing, and interacting w
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/chatlamix.git
-cd chatlamix
+git clone https://github.com/yourusername/artsogen.git
+cd artsogen
 ```
 
 2. Install dependencies:
@@ -96,7 +96,7 @@ npm run dev
 ## Project Structure
 
 ```
-chatlamix/
+artsogen/
 ├── app/
 │   ├── api/
 │   │   ├── characters/    # Character CRUD + auto-tagging
