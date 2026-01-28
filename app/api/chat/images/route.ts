@@ -389,7 +389,7 @@ export async function POST(request: NextRequest) {
     // Get image as base64 - handle both JSON and binary responses
     const contentType = segmindResponse.headers.get("content-type") || "";
     let base64Image: string;
-    let imageBuffer: ArrayBuffer;
+    let imageBuffer: ArrayBuffer | Buffer;
     
     if (contentType.includes("application/json")) {
       const result = await segmindResponse.json();
