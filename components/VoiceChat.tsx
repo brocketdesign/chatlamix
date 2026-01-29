@@ -49,20 +49,39 @@ export default function VoiceChat({
       }
 
       // Initialize voice chat session with backend to get character instructions
+      console.log("[VoiceChat] Initializing session for character:", characterId);
+
       const response = await fetch("/api/voice-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ characterId }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to initialize voice chat");
-      }
+      console.log("[VoiceChat] API response status:", response.status);
 
       const data = await response.json();
-      console.log("Voice chat session initialized:", data.session);
+      console.log("[VoiceChat] API response data:", data);
+
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP ${response.status}: Failed to initialize voice chat`;
+        console.error("[VoiceChat] API error:", errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (!data.session?.clientSecret) {
+        console.error("[VoiceChat] Missing clientSecret in response:", data);
+        throw new Error("Server did not return a valid session token");
+      }
+
+      console.log("[VoiceChat] Session initialized successfully:", {
+        characterName: data.session.characterName,
+        model: data.session.model,
+        voice: data.session.voice,
+        hasClientSecret: !!data.session.clientSecret,
+      });
 
       // Create the RealtimeAgent with character personality
+      console.log("[VoiceChat] Creating RealtimeAgent...");
       const agent = new RealtimeAgent({
         name: data.session.characterName,
         instructions: data.session.systemInstructions,
@@ -70,6 +89,7 @@ export default function VoiceChat({
       });
 
       // Create the session
+      console.log("[VoiceChat] Creating RealtimeSession...");
       const session = new RealtimeSession(agent, {
         model: data.session.model,
       });
@@ -77,23 +97,32 @@ export default function VoiceChat({
 
       // Set up event listeners for audio feedback
       session.on("audio_start", () => {
+        console.log("[VoiceChat] Audio started (character speaking)");
         setIsCharacterSpeaking(true);
       });
 
       session.on("audio_stopped", () => {
+        console.log("[VoiceChat] Audio stopped");
         setIsCharacterSpeaking(false);
       });
 
       session.on("error", (err) => {
-        console.error("Session error:", err);
+        console.error("[VoiceChat] Session error:", err);
         setError(err.error?.toString() || "An error occurred during the call");
       });
 
       // Connect using the ephemeral token from the server
       // The token is valid for 1 minute and securely authenticates the session
-      await session.connect({
-        apiKey: data.session.clientSecret,
-      });
+      console.log("[VoiceChat] Connecting to OpenAI Realtime API...");
+      try {
+        await session.connect({
+          apiKey: data.session.clientSecret,
+        });
+        console.log("[VoiceChat] Connected successfully!");
+      } catch (connectErr) {
+        console.error("[VoiceChat] Connection failed:", connectErr);
+        throw connectErr;
+      }
 
       // Set up audio visualization after connection
       try {
@@ -119,7 +148,12 @@ export default function VoiceChat({
       startCallTimer();
 
     } catch (err) {
-      console.error("Error starting call:", err);
+      console.error("[VoiceChat] Error starting call:", err);
+      console.error("[VoiceChat] Error details:", {
+        name: err instanceof Error ? err.name : "Unknown",
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       const errorMessage = err instanceof Error ? err.message : "Unable to start voice chat. Please try again.";
       setError(errorMessage);
       setCallState("idle");
