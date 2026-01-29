@@ -104,7 +104,7 @@ CONVERSATION GUIDELINES:
       characterName: character.name,
       systemInstructions,
       voice: determineVoice(personality),
-      model: "gpt-4o-realtime-preview-2024-10-01", // Latest realtime model
+      model: "gpt-4o-realtime-preview-2024-12-17", // Latest realtime model
     };
 
     // Save voice session if user is authenticated
@@ -141,20 +141,20 @@ CONVERSATION GUIDELINES:
 function determineVoice(personality?: CharacterPersonality): string {
   if (!personality) return "alloy";
 
-  // OpenAI Realtime API voices: alloy, echo, fable, onyx, nova, shimmer
+  // OpenAI Realtime API voices: alloy, ash, ballad, coral, sage, verse
   const { gender } = personality as any;
-  const mood = personality.mood.toLowerCase();
-  const tone = personality.tone.toLowerCase();
+  const mood = personality.mood?.toLowerCase() || "";
+  const tone = personality.tone?.toLowerCase() || "";
 
   // Map character attributes to voices
   if (gender === "female") {
-    if (mood.includes("playful") || tone.includes("warm")) return "nova";
-    if (mood.includes("mysterious") || tone.includes("sarcastic")) return "shimmer";
+    if (mood.includes("playful") || tone.includes("warm")) return "coral";
+    if (mood.includes("mysterious") || tone.includes("sarcastic")) return "sage";
     return "alloy"; // Default female voice
   } else if (gender === "male") {
-    if (tone.includes("deep") || mood.includes("serious")) return "onyx";
-    if (tone.includes("friendly") || mood.includes("cheerful")) return "echo";
-    return "fable"; // Default male voice
+    if (tone.includes("deep") || mood.includes("serious")) return "ash";
+    if (tone.includes("friendly") || mood.includes("cheerful")) return "verse";
+    return "ballad"; // Default male voice
   }
 
   return "alloy"; // Fallback
