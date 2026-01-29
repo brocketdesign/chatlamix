@@ -38,6 +38,15 @@ export default function VoiceChat({
       setCallState("connecting");
       setError(null);
 
+      // Check if mediaDevices API is available (requires secure context: HTTPS or localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const isSecure = window.isSecureContext;
+        if (!isSecure) {
+          throw new Error("Voice chat requires a secure connection (HTTPS). Please access the site via HTTPS.");
+        }
+        throw new Error("Your browser does not support microphone access.");
+      }
+
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
@@ -95,7 +104,8 @@ export default function VoiceChat({
       }
     } catch (err) {
       console.error("Error starting call:", err);
-      setError("Unable to access microphone. Please check your permissions.");
+      const errorMessage = err instanceof Error ? err.message : "Unable to access microphone. Please check your permissions.";
+      setError(errorMessage);
       setCallState("idle");
     }
   };
