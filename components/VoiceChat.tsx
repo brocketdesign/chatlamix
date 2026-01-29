@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
 
 interface VoiceChatProps {
   characterId: string;
@@ -25,12 +26,12 @@ export default function VoiceChat({
   const [callDuration, setCallDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const sessionRef = useRef<RealtimeSession | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   // Start voice call
   const startCall = async () => {
@@ -47,66 +48,86 @@ export default function VoiceChat({
         throw new Error("Your browser does not support microphone access.");
       }
 
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
+      // Initialize voice chat session with backend to get character instructions
+      const response = await fetch("/api/voice-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ characterId }),
+      });
 
-      // Set up audio context for visualization
-      const audioContext = new AudioContext();
-      audioContextRef.current = audioContext;
-      
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyserRef.current = analyser;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      // Start monitoring audio levels
-      monitorAudioLevels();
-
-      // Initialize voice chat session with backend
-      try {
-        const response = await fetch("/api/voice-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ characterId }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to initialize voice chat");
-        }
-
-        const data = await response.json();
-        console.log("Voice chat session initialized:", data.session);
-        
-        // In a real implementation, you would:
-        // 1. Use the session config to connect to OpenAI Realtime API via WebSocket
-        // 2. Set up WebRTC for real-time audio streaming
-        // 3. Handle bidirectional audio communication
-        
-        // For now, simulate successful connection
-        setTimeout(() => {
-          setCallState("connected");
-          startCallTimer();
-        }, 1500);
-      } catch (apiError) {
-        console.error("Error initializing voice session:", apiError);
-        setError("Failed to connect to voice service. Please try again.");
-        setCallState("idle");
-        
-        // Clean up media stream
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-          mediaStreamRef.current = null;
-        }
-        return;
+      if (!response.ok) {
+        throw new Error("Failed to initialize voice chat");
       }
+
+      const data = await response.json();
+      console.log("Voice chat session initialized:", data.session);
+
+      // Create the RealtimeAgent with character personality
+      const agent = new RealtimeAgent({
+        name: data.session.characterName,
+        instructions: data.session.systemInstructions,
+        voice: data.session.voice,
+      });
+
+      // Create the session
+      const session = new RealtimeSession(agent, {
+        model: data.session.model,
+      });
+      sessionRef.current = session;
+
+      // Set up event listeners for audio feedback
+      session.on("audio_start", () => {
+        setIsCharacterSpeaking(true);
+      });
+
+      session.on("audio_stopped", () => {
+        setIsCharacterSpeaking(false);
+      });
+
+      session.on("error", (err) => {
+        console.error("Session error:", err);
+        setError(err.error?.toString() || "An error occurred during the call");
+      });
+
+      // Connect - this automatically handles microphone and audio output
+      await session.connect({
+        apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || "",
+      });
+
+      // Set up audio visualization after connection
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+        
+        const audioContext = new AudioContext();
+        audioContextRef.current = audioContext;
+        
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        monitorAudioLevels();
+      } catch (audioErr) {
+        console.warn("Could not set up audio visualization:", audioErr);
+      }
+
+      setCallState("connected");
+      startCallTimer();
+
     } catch (err) {
       console.error("Error starting call:", err);
-      const errorMessage = err instanceof Error ? err.message : "Unable to access microphone. Please check your permissions.";
+      const errorMessage = err instanceof Error ? err.message : "Unable to start voice chat. Please try again.";
       setError(errorMessage);
       setCallState("idle");
+      
+      // Clean up on error
+      if (sessionRef.current) {
+        sessionRef.current.close();
+        sessionRef.current = null;
+      }
     }
   };
 
@@ -141,16 +162,16 @@ export default function VoiceChat({
 
   // End voice call
   const endCall = () => {
+    // Close the realtime session
+    if (sessionRef.current) {
+      sessionRef.current.close();
+      sessionRef.current = null;
+    }
+
     // Stop media stream
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
-    }
-
-    // Close peer connection
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
     }
 
     // Stop audio context
@@ -179,11 +200,10 @@ export default function VoiceChat({
 
   // Toggle mute
   const toggleMute = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = !isMuted; // Corrected: enable when unmuting
-      });
-      setIsMuted(!isMuted);
+    if (sessionRef.current) {
+      const newMutedState = !isMuted;
+      sessionRef.current.mute(newMutedState);
+      setIsMuted(newMutedState);
     }
   };
 
@@ -197,11 +217,11 @@ export default function VoiceChat({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (sessionRef.current) {
+        sessionRef.current.close();
+      }
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
       }
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -214,17 +234,6 @@ export default function VoiceChat({
       }
     };
   }, []);
-
-  // Simulate character speaking periodically
-  useEffect(() => {
-    if (callState !== "connected") return;
-
-    const interval = setInterval(() => {
-      setIsCharacterSpeaking((prev) => !prev);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [callState]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
