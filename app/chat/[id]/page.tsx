@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Character } from "@/lib/types";
 import { useAuth } from "@/lib/supabase/auth-context";
+import VoiceChat from "@/components/VoiceChat";
 
 interface Message {
   id: string;
@@ -71,6 +72,9 @@ export default function ChatPage() {
   // Dropdown menu state
   const [showDropdownMenu, setShowDropdownMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Voice chat state
+  const [showVoiceChat, setShowVoiceChat] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -556,6 +560,18 @@ export default function ChatPage() {
           
           {/* Header Actions */}
           <div className="flex items-center gap-2">
+            {/* Voice Call Button */}
+            <button
+              onClick={() => setShowVoiceChat(true)}
+              className="p-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              aria-label="Start voice call"
+              title="Start voice call"
+            >
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+            </button>
+            
             {/* Coins Display */}
             <div className="flex items-center gap-1 px-2 py-1 bg-surface-light rounded-full text-sm">
               <span>🪙</span>
@@ -893,6 +909,16 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Voice Chat Modal */}
+      {showVoiceChat && (
+        <VoiceChat
+          characterId={character.id}
+          characterName={character.name}
+          characterImage={character.thumbnail}
+          onClose={() => setShowVoiceChat(false)}
+        />
       )}
     </div>
   );
