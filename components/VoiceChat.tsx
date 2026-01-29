@@ -89,9 +89,10 @@ export default function VoiceChat({
         setError(err.error?.toString() || "An error occurred during the call");
       });
 
-      // Connect - this automatically handles microphone and audio output
+      // Connect using the ephemeral token from the server
+      // The token is valid for 1 minute and securely authenticates the session
       await session.connect({
-        apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || "",
+        apiKey: data.session.clientSecret,
       });
 
       // Set up audio visualization after connection

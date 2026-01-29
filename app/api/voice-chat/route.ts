@@ -97,14 +97,46 @@ CONVERSATION GUIDELINES:
 8. Use natural speech patterns with appropriate pauses
 9. Be warm and personable in your delivery`;
 
+    const voice = determineVoice(personality);
+    const model = "gpt-4o-realtime-preview-2024-12-17";
+
+    // Create an ephemeral token for secure client-side connection
+    // This token is valid for 1 minute and can be safely sent to the client
+    const ephemeralTokenResponse = await fetch(
+      "https://api.openai.com/v1/realtime/sessions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          voice,
+          instructions: systemInstructions,
+        }),
+      }
+    );
+
+    if (!ephemeralTokenResponse.ok) {
+      const errorData = await ephemeralTokenResponse.text();
+      console.error("Failed to create ephemeral token:", errorData);
+      return NextResponse.json(
+        { error: "Failed to create voice session token" },
+        { status: 500 }
+      );
+    }
+
+    const ephemeralData = await ephemeralTokenResponse.json();
+
     // Create a session configuration for OpenAI Realtime API
-    // Note: The actual WebRTC/WebSocket connection will be handled client-side
     const sessionConfig = {
       characterId: character.id,
       characterName: character.name,
       systemInstructions,
-      voice: determineVoice(personality),
-      model: "gpt-4o-realtime-preview-2024-12-17", // Latest realtime model
+      voice,
+      model,
+      clientSecret: ephemeralData.client_secret, // Ephemeral token for client
     };
 
     // Save voice session if user is authenticated
@@ -123,10 +155,6 @@ CONVERSATION GUIDELINES:
     return NextResponse.json({
       success: true,
       session: sessionConfig,
-      // Note: In production, never send API key to client!
-      // Instead, implement a WebSocket proxy server that connects to OpenAI
-      // and relays the connection securely.
-      // apiKey: process.env.OPENAI_API_KEY, // REMOVED - Security risk!
     });
   } catch (error) {
     console.error("Error creating voice session:", error);
