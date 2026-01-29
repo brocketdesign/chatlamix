@@ -4,7 +4,7 @@ import { useState } from "react";
 import VoiceChat from "@/components/VoiceChat";
 
 export default function VoiceChatDemo() {
-  const [showVoiceChat, setShowVoiceChat] = useState(true);
+  const [showVoiceChat, setShowVoiceChat] = useState(false); // Start hidden
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white flex items-center justify-center p-4">

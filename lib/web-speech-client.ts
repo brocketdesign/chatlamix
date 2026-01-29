@@ -41,6 +41,8 @@ export class WebSpeechVoiceClient {
 
     this.characterContext = config.systemInstructions;
     this.isListening = true;
+    let consecutiveErrors = 0;
+    const MAX_RETRIES = 3;
 
     this.recognition.onresult = async (event: any) => {
       const last = event.results.length - 1;
@@ -53,6 +55,7 @@ export class WebSpeechVoiceClient {
         const response = await this.generateResponse(transcript, config.characterName);
         this.speak(response);
         config.onResponse?.(response);
+        consecutiveErrors = 0; // Reset error counter on success
       } catch (error) {
         console.error("Error generating response:", error);
         config.onError?.("Failed to generate response");
@@ -61,12 +64,19 @@ export class WebSpeechVoiceClient {
 
     this.recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
-      config.onError?.(event.error);
+      consecutiveErrors++;
+      
+      if (consecutiveErrors >= MAX_RETRIES) {
+        this.isListening = false;
+        config.onError?.(`Speech recognition failed: ${event.error}`);
+      } else {
+        config.onError?.(event.error);
+      }
     };
 
     this.recognition.onend = () => {
-      if (this.isListening) {
-        // Restart if still supposed to be listening
+      // Only restart if still supposed to be listening and haven't exceeded max retries
+      if (this.isListening && consecutiveErrors < MAX_RETRIES) {
         this.recognition.start();
       }
     };
@@ -80,7 +90,7 @@ export class WebSpeechVoiceClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        characterId,
+        characterId, // Using characterId to match API expectations
         message: userInput,
       }),
     });
@@ -101,17 +111,11 @@ export class WebSpeechVoiceClient {
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Configure voice if provided, otherwise use default
+    // Configure voice if provided
     if (voice) {
       utterance.voice = voice;
-    } else {
-      // Try to find a good default voice
-      const voices = this.synthesis.getVoices();
-      const preferredVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Female'));
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
     }
+    // Note: If no voice is provided, browser will use default voice
 
     utterance.rate = 1.0;
     utterance.pitch = 1.0;

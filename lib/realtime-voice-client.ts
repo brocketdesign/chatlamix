@@ -28,8 +28,14 @@ export class RealtimeVoiceClient {
       // Initialize audio context
       this.audioContext = new AudioContext({ sampleRate: 24000 });
 
+      // SECURITY WARNING: This implementation connects directly to OpenAI from the client
+      // In production, you MUST implement a WebSocket proxy on your backend that:
+      // 1. Accepts WebSocket connections from authenticated clients
+      // 2. Connects to OpenAI Realtime API using the API key server-side
+      // 3. Relays messages between client and OpenAI
+      // Never expose API keys to the client!
+      
       // Connect to OpenAI Realtime API
-      // Note: In production, you should proxy this through your backend to protect the API key
       const wsUrl = `wss://api.openai.com/v1/realtime?model=${config.model}`;
       
       this.ws = new WebSocket(wsUrl, [

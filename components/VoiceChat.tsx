@@ -112,6 +112,8 @@ export default function VoiceChat({
       const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
       
       // Consider speaking if average is above threshold
+      // Threshold of 30 is empirically chosen for typical speech levels
+      // Adjust based on your environment (lower for quiet, higher for noisy)
       setIsSpeaking(average > 30);
 
       animationFrameRef.current = requestAnimationFrame(checkAudioLevel);
@@ -169,7 +171,7 @@ export default function VoiceChat({
   const toggleMute = () => {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = isMuted;
+        track.enabled = !isMuted; // Corrected: enable when unmuting
       });
       setIsMuted(!isMuted);
     }
@@ -221,6 +223,7 @@ export default function VoiceChat({
         <button
           onClick={callState === "connected" ? endCall : onClose}
           className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+          aria-label="Close voice chat"
         >
           <svg
             className="w-6 h-6"
@@ -319,6 +322,7 @@ export default function VoiceChat({
               <button
                 onClick={startCall}
                 className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+                aria-label="Start voice call"
               >
                 <svg
                   className="w-10 h-10 text-white"
@@ -339,6 +343,7 @@ export default function VoiceChat({
                       ? "bg-red-500 hover:bg-red-600"
                       : "bg-white/20 hover:bg-white/30"
                   }`}
+                  aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
                 >
                   <svg
                     className="w-8 h-8 text-white"
@@ -364,6 +369,7 @@ export default function VoiceChat({
                 <button
                   onClick={endCall}
                   className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+                  aria-label="End voice call"
                 >
                   <svg
                     className="w-10 h-10 text-white"

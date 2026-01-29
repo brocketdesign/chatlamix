@@ -123,7 +123,10 @@ CONVERSATION GUIDELINES:
     return NextResponse.json({
       success: true,
       session: sessionConfig,
-      apiKey: process.env.OPENAI_API_KEY, // In production, use a secure method
+      // Note: In production, never send API key to client!
+      // Instead, implement a WebSocket proxy server that connects to OpenAI
+      // and relays the connection securely.
+      // apiKey: process.env.OPENAI_API_KEY, // REMOVED - Security risk!
     });
   } catch (error) {
     console.error("Error creating voice session:", error);
