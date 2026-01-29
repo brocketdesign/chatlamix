@@ -10,6 +10,7 @@ Artsogen is an AI-powered platform for creating, customizing, and interacting wi
 - **AI Image Generation** - Generate character images using Segmind API
 - **Face Swap for Consistency** - Maintain character appearance consistency across images using face swap
 - **Personality-based Chat** - Chat with characters using their unique personality, mood, and relationship style
+- **Voice Conversations** - 🆕 Real-time voice calls with characters using OpenAI Realtime API
 - **Character Gallery** - Manage and showcase generated images for each character
 - **Public/Private Characters** - Control visibility of your characters
 
@@ -19,6 +20,7 @@ Artsogen is an AI-powered platform for creating, customizing, and interacting wi
 - **Authentication**: Clerk
 - **AI/ML APIs**: 
   - OpenAI GPT-4o-mini (chat & tagging)
+  - OpenAI Realtime API (voice conversations)
   - Segmind z-image-turbo (image generation)
   - Segmind faceswap-v5 (face consistency)
 - **Styling**: Tailwind CSS
@@ -146,6 +148,25 @@ artsogen/
 1. Go to any character profile or your dashboard
 2. Click "Chat"
 3. The AI will respond based on the character's personality, mood, and relationship style
+
+### Voice Conversations (NEW!)
+
+1. Open a character chat
+2. Click the phone icon (📞) in the chat header
+3. Grant microphone permission when prompted
+4. Click the green call button to start
+5. Have a natural voice conversation with your character
+6. Use the mute button to temporarily disable your microphone
+7. Click the red phone button to end the call
+
+**Features:**
+- Real-time audio streaming with low latency
+- Character responds with appropriate voice based on personality
+- Professional UI with call controls and duration timer
+- Audio visualization showing when you or the character is speaking
+- Powered by OpenAI Realtime API
+
+**Note:** Voice feature requires OpenAI API key with Realtime API access. See [VOICE_CHAT_GUIDE.md](VOICE_CHAT_GUIDE.md) for detailed setup instructions.
 
 ## Character Data Model
 
