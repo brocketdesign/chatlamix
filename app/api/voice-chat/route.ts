@@ -121,6 +121,20 @@ CONVERSATION GUIDELINES:
     // Create an ephemeral token for secure client-side connection
     // This token is valid for 1 minute and can be safely sent to the client
     console.log("[voice-chat] Creating ephemeral token with OpenAI Realtime API...");
+    console.log("[voice-chat] Request params:", {
+      model,
+      voice,
+      instructionsLength: systemInstructions.length,
+      apiKeyPrefix: apiKey?.substring(0, 10),
+    });
+    
+    const requestBody = {
+      model,
+      voice,
+      instructions: systemInstructions,
+    };
+    
+    console.log("[voice-chat] Request body (truncated):", JSON.stringify(requestBody).substring(0, 500));
     
     const ephemeralTokenResponse = await fetch(
       "https://api.openai.com/v1/realtime/sessions",
@@ -130,22 +144,23 @@ CONVERSATION GUIDELINES:
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          model,
-          voice,
-          instructions: systemInstructions,
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
+    console.log("[voice-chat] OpenAI response status:", ephemeralTokenResponse.status);
+    console.log("[voice-chat] OpenAI response headers:", Object.fromEntries(ephemeralTokenResponse.headers.entries()));
+
     if (!ephemeralTokenResponse.ok) {
       const errorData = await ephemeralTokenResponse.text();
-      console.error("[voice-chat] Failed to create ephemeral token:", errorData);
+      console.error("[voice-chat] Failed to create ephemeral token");
       console.error("[voice-chat] Response status:", ephemeralTokenResponse.status);
+      console.error("[voice-chat] Response body:", errorData);
       return NextResponse.json(
         { 
           error: "Failed to create voice session token",
-          details: ephemeralTokenResponse.status === 401 ? "API key authentication failed" : errorData
+          details: ephemeralTokenResponse.status === 401 ? "API key authentication failed" : errorData,
+          status: ephemeralTokenResponse.status,
         },
         { status: 500 }
       );
@@ -153,10 +168,13 @@ CONVERSATION GUIDELINES:
 
     const ephemeralData = await ephemeralTokenResponse.json();
     console.log("[voice-chat] Ephemeral token created successfully");
+    console.log("[voice-chat] Full response structure:", JSON.stringify(ephemeralData, null, 2));
     console.log("[voice-chat] Token structure:", {
       hasClientSecret: !!ephemeralData.client_secret,
       tokenType: typeof ephemeralData.client_secret,
       hasValue: !!ephemeralData.client_secret?.value,
+      expiresAt: ephemeralData.client_secret?.expires_at,
+      tokenPrefix: ephemeralData.client_secret?.value?.substring(0, 15),
     });
 
     // The ephemeral token from OpenAI is returned as { client_secret: { value: "ek_...", expires_at: ... } }

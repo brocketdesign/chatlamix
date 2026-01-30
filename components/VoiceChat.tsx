@@ -13,6 +13,9 @@ interface VoiceChatProps {
 
 type CallState = "idle" | "connecting" | "connected" | "ended";
 
+// Store the original fetch for debugging purposes
+let originalFetchRef: typeof fetch | null = null;
+
 export default function VoiceChat({
   characterId,
   characterName,
@@ -38,6 +41,72 @@ export default function VoiceChat({
     try {
       setCallState("connecting");
       setError(null);
+
+      // Set up a global fetch interceptor to debug WebRTC calls
+      if (!originalFetchRef) {
+        originalFetchRef = window.fetch;
+      }
+      const originalFetch = originalFetchRef;
+      window.fetch = async (...args) => {
+        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || 'unknown';
+        const options = args[1] as RequestInit | undefined;
+        
+        // Log all OpenAI API calls
+        if (url.includes('openai.com')) {
+          console.log("[VoiceChat] Intercepted fetch to OpenAI:", {
+            url,
+            method: options?.method || 'GET',
+            hasBody: !!options?.body,
+            headers: options?.headers,
+          });
+          
+          // If it's a WebRTC call, log more details
+          if (url.includes('/calls') || url.includes('/realtime')) {
+            console.log("[VoiceChat] WebRTC/Realtime API call detected:", url);
+            if (options?.body) {
+              try {
+                const bodyStr = typeof options.body === 'string' ? options.body : 'non-string body';
+                console.log("[VoiceChat] Request body:", bodyStr.substring(0, 500));
+              } catch (e) {
+                console.log("[VoiceChat] Could not log request body");
+              }
+            }
+          }
+        }
+        
+        try {
+          const response = await originalFetch(...args);
+          
+          // Log OpenAI responses, especially errors
+          if (url.includes('openai.com')) {
+            console.log("[VoiceChat] OpenAI response:", {
+              url,
+              status: response.status,
+              ok: response.ok,
+              statusText: response.statusText,
+            });
+            
+            // If it's an error, try to get the response body
+            if (!response.ok && (url.includes('/calls') || url.includes('/realtime'))) {
+              // Clone the response so we can read it and still return it
+              const clonedResponse = response.clone();
+              try {
+                const errorText = await clonedResponse.text();
+                console.error("[VoiceChat] OpenAI error response body:", errorText.substring(0, 1000));
+              } catch (e) {
+                console.error("[VoiceChat] Could not read error response body");
+              }
+            }
+          }
+          
+          return response;
+        } catch (fetchErr) {
+          if (url.includes('openai.com')) {
+            console.error("[VoiceChat] Fetch to OpenAI failed:", fetchErr);
+          }
+          throw fetchErr;
+        }
+      };
 
       // Check if mediaDevices API is available (requires secure context: HTTPS or localhost)
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -89,7 +158,9 @@ export default function VoiceChat({
         model: data.session.model,
         voice: data.session.voice,
         hasClientSecret: !!data.session.clientSecret,
-        tokenPrefix: clientSecret.substring(0, 10),
+        tokenPrefix: clientSecret.substring(0, 15),
+        tokenLength: clientSecret.length,
+        fullSessionData: JSON.stringify(data.session, null, 2).substring(0, 500),
       });
 
       // Create the RealtimeAgent with character personality
@@ -107,6 +178,26 @@ export default function VoiceChat({
       });
       sessionRef.current = session;
 
+      // Set up comprehensive event listeners for debugging
+      session.on("transport_event", (event: any) => {
+        console.log("[VoiceChat] Transport event:", event.type, event);
+        
+        // Log specific transport events that might indicate errors
+        if (event.type === "error" || event.type?.includes("error")) {
+          console.error("[VoiceChat] Transport error event:", event);
+        }
+        if (event.type === "session.created") {
+          console.log("[VoiceChat] Session created on server:", event);
+        }
+        if (event.type === "session.updated") {
+          console.log("[VoiceChat] Session updated:", event);
+        }
+      });
+
+      session.on("history_updated", (history: any) => {
+        console.log("[VoiceChat] History updated, items:", history?.length);
+      });
+
       // Set up event listeners for audio feedback
       session.on("audio_start", () => {
         console.log("[VoiceChat] Audio started (character speaking)");
@@ -120,25 +211,93 @@ export default function VoiceChat({
 
       session.on("error", (err) => {
         console.error("[VoiceChat] Session error:", err);
+        console.error("[VoiceChat] Full error object:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
         setError(err.error?.toString() || "An error occurred during the call");
       });
+
+      // Pre-connection validation: Test if the ephemeral token works with OpenAI
+      console.log("[VoiceChat] Pre-connection validation: Testing ephemeral token...");
+      try {
+        // Make a test request to verify the token is valid
+        // Note: We cannot actually test the WebRTC endpoint directly, but we can check
+        // if the token format looks correct
+        const tokenParts = data.session.clientSecret.split("_");
+        console.log("[VoiceChat] Token structure:", {
+          prefix: tokenParts[0],
+          hasSecondPart: tokenParts.length > 1,
+          secondPartLength: tokenParts[1]?.length,
+        });
+      } catch (validationErr) {
+        console.error("[VoiceChat] Token validation error:", validationErr);
+      }
 
       // Connect using the ephemeral token from the server
       // The token is valid for 1 minute and securely authenticates the session
       // Note: The model is already configured in the ephemeral token, don't pass it again
       console.log("[VoiceChat] Connecting to OpenAI Realtime API...");
       console.log("[VoiceChat] Using ephemeral token (model configured server-side)");
+      console.log("[VoiceChat] Token details:", {
+        tokenLength: data.session.clientSecret?.length,
+        tokenPrefix: data.session.clientSecret?.substring(0, 15),
+        model: data.session.model,
+        voice: data.session.voice,
+      });
+      
+      // Log the session configuration before connecting
+      console.log("[VoiceChat] RealtimeSession config:", {
+        agentName: agent.name,
+        hasInstructions: !!agent.instructions,
+        instructionsLength: agent.instructions?.length,
+        sessionModel: data.session.model,
+      });
+      
       try {
+        console.log("[VoiceChat] Calling session.connect()...");
         await session.connect({
           apiKey: data.session.clientSecret,
         });
         console.log("[VoiceChat] Connected successfully!");
       } catch (connectErr: any) {
         console.error("[VoiceChat] Connection failed:", connectErr);
-        // Check if it's an SDP parsing error
-        if (connectErr?.message?.includes("Expect line")) {
-          console.error("[VoiceChat] SDP parsing error - OpenAI may have returned an error response");
-          throw new Error("Voice connection failed. Please check your API key and try again.");
+        console.error("[VoiceChat] Connection error type:", connectErr?.constructor?.name);
+        console.error("[VoiceChat] Connection error message:", connectErr?.message);
+        
+        // Try to extract more error details
+        if (connectErr?.response) {
+          console.error("[VoiceChat] Error response:", connectErr.response);
+        }
+        if (connectErr?.cause) {
+          console.error("[VoiceChat] Error cause:", connectErr.cause);
+        }
+        
+        // Check if it's an SDP parsing error (v= is the first line of valid SDP)
+        if (connectErr?.message?.includes("Expect line") || connectErr?.message?.includes("v=")) {
+          console.error("[VoiceChat] SDP parsing error - OpenAI returned an error instead of valid SDP");
+          console.error("[VoiceChat] This typically means:");
+          console.error("  1. The ephemeral token is invalid or expired");
+          console.error("  2. The model specified doesn't support realtime");
+          console.error("  3. The API request was malformed");
+          console.error("  4. OpenAI's API rejected the connection request");
+          
+          // Try to make a test call to see what OpenAI returns
+          try {
+            console.log("[VoiceChat] Making debug request to OpenAI Realtime API...");
+            const debugResponse = await fetch("https://api.openai.com/v1/realtime/sessions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${data.session.clientSecret}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ model: data.session.model }),
+            });
+            const debugText = await debugResponse.text();
+            console.log("[VoiceChat] Debug response status:", debugResponse.status);
+            console.log("[VoiceChat] Debug response:", debugText.substring(0, 500));
+          } catch (debugErr) {
+            console.error("[VoiceChat] Debug request failed:", debugErr);
+          }
+          
+          throw new Error("Voice connection failed. The WebRTC connection received an invalid response. Please try again.");
         }
         throw connectErr;
       }
@@ -177,6 +336,9 @@ export default function VoiceChat({
       setError(errorMessage);
       setCallState("idle");
       
+      // Restore original fetch on error
+      restoreFetch();
+      
       // Clean up on error
       if (sessionRef.current) {
         sessionRef.current.close();
@@ -214,8 +376,19 @@ export default function VoiceChat({
     }, 1000);
   };
 
+  // Restore original fetch function
+  const restoreFetch = () => {
+    if (originalFetchRef) {
+      window.fetch = originalFetchRef;
+      console.log("[VoiceChat] Restored original fetch");
+    }
+  };
+
   // End voice call
   const endCall = () => {
+    // Restore original fetch
+    restoreFetch();
+
     // Close the realtime session
     if (sessionRef.current) {
       sessionRef.current.close();
@@ -271,6 +444,9 @@ export default function VoiceChat({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Restore original fetch
+      restoreFetch();
+      
       if (sessionRef.current) {
         sessionRef.current.close();
       }
