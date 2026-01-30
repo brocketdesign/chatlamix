@@ -73,11 +73,23 @@ export default function VoiceChat({
         throw new Error("Server did not return a valid session token");
       }
 
+      // Validate the ephemeral token format - must start with "ek_"
+      const clientSecret = data.session.clientSecret;
+      if (typeof clientSecret !== 'string' || !clientSecret.startsWith('ek_')) {
+        console.error("[VoiceChat] Invalid clientSecret format:", {
+          type: typeof clientSecret,
+          startsWithEk: typeof clientSecret === 'string' ? clientSecret.startsWith('ek_') : false,
+          value: typeof clientSecret === 'string' ? clientSecret.substring(0, 10) + '...' : clientSecret,
+        });
+        throw new Error("Invalid ephemeral token format. Expected token starting with 'ek_'");
+      }
+
       console.log("[VoiceChat] Session initialized successfully:", {
         characterName: data.session.characterName,
         model: data.session.model,
         voice: data.session.voice,
         hasClientSecret: !!data.session.clientSecret,
+        tokenPrefix: clientSecret.substring(0, 10),
       });
 
       // Create the RealtimeAgent with character personality

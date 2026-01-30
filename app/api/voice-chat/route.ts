@@ -151,6 +151,23 @@ CONVERSATION GUIDELINES:
 
     const ephemeralData = await ephemeralTokenResponse.json();
     console.log("[voice-chat] Ephemeral token created successfully");
+    console.log("[voice-chat] Token structure:", {
+      hasClientSecret: !!ephemeralData.client_secret,
+      tokenType: typeof ephemeralData.client_secret,
+      hasValue: !!ephemeralData.client_secret?.value,
+    });
+
+    // The ephemeral token from OpenAI is returned as { client_secret: { value: "ek_...", expires_at: ... } }
+    // We need to extract the value property for the client to use
+    const ephemeralToken = ephemeralData.client_secret?.value || ephemeralData.client_secret;
+    
+    if (!ephemeralToken || (typeof ephemeralToken === 'string' && !ephemeralToken.startsWith('ek_'))) {
+      console.error("[voice-chat] Invalid ephemeral token format:", ephemeralData);
+      return NextResponse.json(
+        { error: "Failed to create valid ephemeral token" },
+        { status: 500 }
+      );
+    }
 
     // Create a session configuration for OpenAI Realtime API
     const sessionConfig = {
@@ -159,7 +176,7 @@ CONVERSATION GUIDELINES:
       systemInstructions,
       voice,
       model,
-      clientSecret: ephemeralData.client_secret, // Ephemeral token for client
+      clientSecret: ephemeralToken, // Ephemeral token value (starts with ek_)
     };
 
     // Save voice session if user is authenticated
