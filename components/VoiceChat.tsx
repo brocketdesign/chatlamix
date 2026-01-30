@@ -125,12 +125,12 @@ export default function VoiceChat({
 
       // Connect using the ephemeral token from the server
       // The token is valid for 1 minute and securely authenticates the session
+      // Note: The model is already configured in the ephemeral token, don't pass it again
       console.log("[VoiceChat] Connecting to OpenAI Realtime API...");
-      console.log("[VoiceChat] Using model:", data.session.model);
+      console.log("[VoiceChat] Using ephemeral token (model configured server-side)");
       try {
         await session.connect({
           apiKey: data.session.clientSecret,
-          model: data.session.model,
         });
         console.log("[VoiceChat] Connected successfully!");
       } catch (connectErr: any) {

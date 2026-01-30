@@ -111,8 +111,9 @@ CONVERSATION GUIDELINES:
 9. Be warm and personable in your delivery`;
 
     const voice = determineVoice(personality);
-    // Use the latest realtime model - gpt-4o-realtime-preview is the current stable version
-    const model = "gpt-4o-realtime-preview";
+    // Use the latest realtime model - gpt-4o-realtime-preview-2024-12-17 is the stable dated version
+    // Note: Don't use the bare "gpt-4o-realtime-preview" alias as it can cause WebRTC connection issues
+    const model = "gpt-4o-realtime-preview-2024-12-17";
 
     // Get the API key (already validated by getOpenAIClient check above)
     const apiKey = process.env.OPENAI_API_KEY;
