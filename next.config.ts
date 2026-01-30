@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Hostinger deployment
+  output: "standalone",
   images: {
     remotePatterns: [
       {
