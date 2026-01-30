@@ -126,13 +126,20 @@ export default function VoiceChat({
       // Connect using the ephemeral token from the server
       // The token is valid for 1 minute and securely authenticates the session
       console.log("[VoiceChat] Connecting to OpenAI Realtime API...");
+      console.log("[VoiceChat] Using model:", data.session.model);
       try {
         await session.connect({
           apiKey: data.session.clientSecret,
+          model: data.session.model,
         });
         console.log("[VoiceChat] Connected successfully!");
-      } catch (connectErr) {
+      } catch (connectErr: any) {
         console.error("[VoiceChat] Connection failed:", connectErr);
+        // Check if it's an SDP parsing error
+        if (connectErr?.message?.includes("Expect line")) {
+          console.error("[VoiceChat] SDP parsing error - OpenAI may have returned an error response");
+          throw new Error("Voice connection failed. Please check your API key and try again.");
+        }
         throw connectErr;
       }
 

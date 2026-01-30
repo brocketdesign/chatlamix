@@ -111,7 +111,7 @@ CONVERSATION GUIDELINES:
 9. Be warm and personable in your delivery`;
 
     const voice = determineVoice(personality);
-    const model = "gpt-4o-realtime-preview-2024-12-17";
+    const model = "gpt-4o-realtime-preview-2025-06-03";
 
     // Get the API key (already validated by getOpenAIClient check above)
     const apiKey = process.env.OPENAI_API_KEY;
