@@ -5,11 +5,18 @@ import { CharacterPersonality, PhysicalAttributes } from "@/lib/types";
 
 // Initialize OpenAI only when API key is available
 const getOpenAIClient = () => {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    console.error("[chat] OPENAI_API_KEY is not set in environment variables");
+    console.error("[chat] NODE_ENV:", process.env.NODE_ENV);
     return null;
   }
+  
+  console.log("[chat] OPENAI_API_KEY detected:", apiKey.substring(0, 10) + "...");
+  
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: apiKey,
   });
 };
 

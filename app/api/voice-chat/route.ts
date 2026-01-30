@@ -5,11 +5,19 @@ import { CharacterPersonality, PhysicalAttributes } from "@/lib/types";
 
 // Initialize OpenAI client
 const getOpenAIClient = () => {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    console.error("[voice-chat] OPENAI_API_KEY is not set in environment variables");
+    console.error("[voice-chat] Available env vars:", Object.keys(process.env).filter(k => k.includes('OPENAI') || k.includes('NEXT')).join(', '));
     return null;
   }
+  
+  // Log key detection (partial key for security)
+  console.log("[voice-chat] OPENAI_API_KEY detected:", apiKey.substring(0, 10) + "...");
+  
   return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: apiKey,
   });
 };
 
@@ -18,8 +26,13 @@ export async function POST(request: NextRequest) {
   try {
     const openai = getOpenAIClient();
     if (!openai) {
+      console.error("[voice-chat] OpenAI client initialization failed - API key missing");
       return NextResponse.json(
-        { error: "Voice chat API not configured. Please set OPENAI_API_KEY." },
+        { 
+          error: "Voice chat API not configured. OPENAI_API_KEY environment variable is not set on the server.",
+          hint: "If using Hostinger, add OPENAI_API_KEY to your environment variables in the hosting panel.",
+          nodeEnv: process.env.NODE_ENV
+        },
         { status: 500 }
       );
     }
