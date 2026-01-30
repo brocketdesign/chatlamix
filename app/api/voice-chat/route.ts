@@ -113,14 +113,19 @@ CONVERSATION GUIDELINES:
     const voice = determineVoice(personality);
     const model = "gpt-4o-realtime-preview-2024-12-17";
 
+    // Get the API key (already validated by getOpenAIClient check above)
+    const apiKey = process.env.OPENAI_API_KEY;
+    
     // Create an ephemeral token for secure client-side connection
     // This token is valid for 1 minute and can be safely sent to the client
+    console.log("[voice-chat] Creating ephemeral token with OpenAI Realtime API...");
+    
     const ephemeralTokenResponse = await fetch(
       "https://api.openai.com/v1/realtime/sessions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -133,14 +138,19 @@ CONVERSATION GUIDELINES:
 
     if (!ephemeralTokenResponse.ok) {
       const errorData = await ephemeralTokenResponse.text();
-      console.error("Failed to create ephemeral token:", errorData);
+      console.error("[voice-chat] Failed to create ephemeral token:", errorData);
+      console.error("[voice-chat] Response status:", ephemeralTokenResponse.status);
       return NextResponse.json(
-        { error: "Failed to create voice session token" },
+        { 
+          error: "Failed to create voice session token",
+          details: ephemeralTokenResponse.status === 401 ? "API key authentication failed" : errorData
+        },
         { status: 500 }
       );
     }
 
     const ephemeralData = await ephemeralTokenResponse.json();
+    console.log("[voice-chat] Ephemeral token created successfully");
 
     // Create a session configuration for OpenAI Realtime API
     const sessionConfig = {
